@@ -20,53 +20,23 @@ def execute_commit(conn, query, params=None):
         print(f"Insert error: {e}")
         conn.rollback()
 
-def get_password_hash_by_id():
-    # for login, check if the user is exist and return password hash
+def get_aro_information_by_email(email):
     conn = get_db_connection()
     sql = ""
-    result = execute_query(conn, sql)
+    result = execute_query(conn, sql, email)
     
     conn.close()
     return result
 
-def get_student_information_by_student_id():
-    # student
+def get_dro_information_by_email(email):
     conn = get_db_connection()
     sql = ""
-    result = execute_query(conn, sql)
+    result = execute_query(conn, sql, email)
     
     conn.close()
     return result
-
-def update_student_information_sql():
-    # student
-    conn = get_db_connection()
-    sql = ""
-    result = execute_commit(conn, sql)
-    
-    conn.close()
-    return result
-
-def get_guardian_information_by_guardian_id():
-    # student and guardain, when show student information or guardian information
-    conn = get_db_connection()
-    sql = ""
-    result = execute_query(conn, sql)
-    
-    conn.close()
-    return result
-
-def update_guardian_information_sql():
-    # guardian only
-    conn = get_db_connection()
-    sql = ""
-    result = execute_commit(conn, sql)
-    
-    conn.close()
-    return result
-
+        
 def list_all_grades_sql():
-    # ARO only
     conn = get_db_connection()
     sql = ""
     result = execute_query(conn, sql)
@@ -74,35 +44,31 @@ def list_all_grades_sql():
     conn.close()
     return result
 
-def list_grades_by_student_id():
-    # ARO, student and guardian
+def list_grades_by_student_id(student_id):
     conn = get_db_connection()
     sql = ""
-    result = execute_query(conn, sql)
+    result = execute_query(conn, sql, student_id)
     
     conn.close()
     return result
 
-def list_grades_by_course_id():
-    # ARO only
+def list_grades_by_course_id(course_id):
     conn = get_db_connection()
     sql = ""
-    result = execute_query(conn, sql)
+    result = execute_query(conn, sql, course_id)
     
     conn.close()
     return result
 
-def list_grades_by_term():
-    # ARO only
+def list_grades_by_term(term):
     conn = get_db_connection()
     sql = ""
-    result = execute_query(conn, sql)
+    result = execute_query(conn, sql, term)
     
     conn.close()
     return result
 
 def add_grades_sql():
-    # ARO only
     conn = get_db_connection()
     sql = ""
     result = execute_commit(conn, sql)
@@ -111,7 +77,6 @@ def add_grades_sql():
     return result
 
 def modify_grades_sql():
-    # ARO only
     conn = get_db_connection()
     sql = ""
     result = execute_commit(conn, sql)
@@ -119,17 +84,15 @@ def modify_grades_sql():
     conn.close()
     return result
 
-def delete_grades_sql():
-    # ARO only
+def delete_grades_sql(grades_id):
     conn = get_db_connection()
     sql = ""
-    result = execute_commit(conn, sql)
+    result = execute_commit(conn, sql, grades_id)
     
     conn.close()
     return result
 
 def list_all_disciplinary_sql():
-    # DRO only
     conn = get_db_connection()
     sql = ""
     result = execute_query(conn, sql)
@@ -137,17 +100,15 @@ def list_all_disciplinary_sql():
     conn.close()
     return result
 
-def list_disciplinary_by_student_id():
-    # DRO, student and guardian
+def list_disciplinary_by_student_id(student_id):
     conn = get_db_connection()
     sql = ""
-    result = execute_query(conn, sql)
+    result = execute_query(conn, sql, student_id)
     
     conn.close()
     return result
 
 def add_disciplinary_sql():
-    # DRO only
     conn = get_db_connection()
     sql = ""
     result = execute_commit(conn, sql)
@@ -156,7 +117,6 @@ def add_disciplinary_sql():
     return result
 
 def modify_disciplinary_sql():
-    # DRO only
     conn = get_db_connection()
     sql = ""
     result = execute_commit(conn, sql)
@@ -164,11 +124,34 @@ def modify_disciplinary_sql():
     conn.close()
     return result
 
-def delete_disciplinary_sql():
-    # DRO only
+def delete_disciplinary_sql(disciplinary_id):
     conn = get_db_connection()
     sql = ""
-    result = execute_commit(conn, sql)
+    result = execute_commit(conn, sql, disciplinary_id)
+    
+    conn.close()
+    return result
+
+def list_student_sql():
+    conn = get_db_connection()
+    sql = ""
+    result = execute_query(conn, sql)
+    
+    conn.close()
+    return result
+
+def list_course_sql():
+    conn = get_db_connection()
+    sql = ""
+    result = execute_query(conn, sql)
+    
+    conn.close()
+    return result
+
+def list_staff_sql():
+    conn = get_db_connection()
+    sql = ""
+    result = execute_query(conn, sql)
     
     conn.close()
     return result
