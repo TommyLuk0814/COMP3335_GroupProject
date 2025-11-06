@@ -52,22 +52,6 @@ def list_grades_by_student_id(student_id):
     conn.close()
     return result
 
-def list_grades_by_course_id(course_id):
-    conn = get_db_connection()
-    sql = ""
-    result = execute_query(conn, sql, course_id)
-    
-    conn.close()
-    return result
-
-def list_grades_by_term(term):
-    conn = get_db_connection()
-    sql = ""
-    result = execute_query(conn, sql, term)
-    
-    conn.close()
-    return result
-
 def add_grades_sql():
     conn = get_db_connection()
     sql = ""
