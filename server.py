@@ -17,7 +17,7 @@ def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
-    role = data.get('role')  # 前端需要提供角色：'student', 'guardian', 'staff'
+    role = data.get('role')  # 'student', 'guardian', 'staff'
 
     if role not in ['student', 'guardian', 'staff']:
         return jsonify({'message': 'Invalid role'}), 400
