@@ -2,26 +2,72 @@ from flask import Flask, request, jsonify, send_from_directory
 from controller import *
 from sql_method_student_guardian import *
 from sql_method_ARO_DRO import *
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 
-@app.route("/login", methods=["GET"])
+app.config['JWT_SECRET_KEY'] = 'helloxixixixixixixixixixixixi'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # Token exp in 1 hour
+
+jwt = JWTManager(app)
+
+@app.route("/login", methods=["POST"])
 def login():
-    # all role
-    email = request.args.get('email')
-    
-    result = login_controller(email)
-    
-    return result
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    role = data.get('role')  # 前端需要提供角色：'student', 'guardian', 'staff'
+
+    if role not in ['student', 'guardian', 'staff']:
+        return jsonify({'message': 'Invalid role'}), 400
+
+    # check the password from dirrerent tables
+    if role == 'student':
+        user_info = get_student_by_email(email)
+    elif role == 'guardian':
+        user_info = get_guardian_by_email(email)
+    else:  # staff
+        user_info = get_staff_by_email(email)
+
+    if not user_info:
+        return jsonify({'message': 'Invalid credentials'}), 401
+
+    # compare password hash
+    if not check_password_hash(user_info.get('password_hash'), password):
+        return jsonify({'message': 'Invalid credentials'}), 401
+
+    # create jwt token
+    user_id = user_info.get('id')
+    additional_claims = {
+        'role': role,
+        'user_id': user_id
+    }
+    access_token = create_access_token(identity=email, additional_claims=additional_claims)
+
+    return jsonify({
+        'access_token': access_token,
+        'role': role,
+        'user_id': user_id
+    }), 200
+
 
 @app.route("/check_information", methods=["GET"])
+@jwt_required()
 def check_information():
-    # student and guardian
-    data = request
-    
-    result = check_information_controller(data)
-    
+    current_user = get_jwt_identity()
+    claims = get_jwt()
+    role = claims.get('role')
+    user_id = claims.get('user_id')
+
+    # 只允許 student 和 guardian
+    if role not in ['student', 'guardian']:
+        return jsonify({'message': 'Access denied'}), 403
+
+    result = check_information_controller(user_id)
     return result
+
+
 
 @app.route("/maintain_information", methods=["PUT"])
 def maintain_information():
