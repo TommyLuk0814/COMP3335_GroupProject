@@ -20,22 +20,42 @@ def execute_commit(conn, query, params=None):
         print(f"Insert error: {e}")
         conn.rollback()
 
-def get_aro_information_by_email(email):
-    conn = get_db_connection()
-    sql = "SELECT * FROM staffs WHERE email = %s AND role = 'ARO'"
-    result = execute_query(conn, sql, email)
-    
-    conn.close()
-    return result
 
-def get_dro_information_by_email(email):
+def get_staff_information_by_email(email):
     conn = get_db_connection()
-    sql = "SELECT * FROM staffs WHERE email = %s AND role = 'DRO'"
-    result = execute_query(conn, sql, email)
-    
+    sql = "SELECT id, email, password, first_name, last_name, role FROM staffs WHERE email = %s"
+    result = execute_query(conn, sql, (email,))
+
     conn.close()
-    return result
-        
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            'id': row[0],
+            'email': row[1],
+            'password_hash': row[2],
+            'first_name': row[3],
+            'last_name': row[4],
+            'role': row[5]  # 'ARO', 'DRO'
+        }
+    return None
+
+# maybe dont need that
+# def get_aro_information_by_email(email):
+#     conn = get_db_connection()
+#     sql = "SELECT * FROM staffs WHERE email = %s AND role = 'ARO'"
+#     result = execute_query(conn, sql, email)
+#
+#     conn.close()
+#     return result
+#
+# def get_dro_information_by_email(email):
+#     conn = get_db_connection()
+#     sql = "SELECT * FROM staffs WHERE email = %s AND role = 'DRO'"
+#     result = execute_query(conn, sql, email)
+#
+#     conn.close()
+#     return result
+
 def list_all_grades_sql():
     conn = get_db_connection()
     sql = """

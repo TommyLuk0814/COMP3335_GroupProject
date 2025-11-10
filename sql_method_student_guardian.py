@@ -20,21 +20,42 @@ def execute_commit(conn, query, params=None):
         print(f"Insert error: {e}")
         conn.rollback()
 
+
 def get_student_information_by_email(email):
     conn = get_db_connection()
-    sql = ""
-    result = execute_query(conn, sql, email)
-    
+    sql = "SELECT id, email, password, first_name, last_name FROM students WHERE email = %s"
+    result = execute_query(conn, sql, (email,))
+
     conn.close()
-    return result
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            'id': row[0],
+            'email': row[1],
+            'password_hash': row[2],
+            'first_name': row[3],
+            'last_name': row[4]
+        }
+    return None
+
 
 def get_guardian_information_by_email(email):
     conn = get_db_connection()
-    sql = ""
-    result = execute_query(conn, sql, email)
-    
+    sql = "SELECT id, email, password, first_name, last_name FROM guardians WHERE email = %s"
+    result = execute_query(conn, sql, (email,))
+
     conn.close()
-    return result
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            'id': row[0],
+            'email': row[1],
+            'password_hash': row[2],
+            'first_name': row[3],
+            'last_name': row[4]
+        }
+    return None
+
 
 def get_student_information_by_student_id(student_id):
     conn = get_db_connection()

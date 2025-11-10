@@ -71,11 +71,11 @@ def login():
 
     # check the password from dirrerent tables
     if role == 'student':
-        user_info = get_student_by_email(email)
+        user_info = get_student_information_by_email(email)
     elif role == 'guardian':
-        user_info = get_guardian_by_email(email)
+        user_info = get_guardian_information_by_email(email)
     else:  # staff
-        user_info = get_staff_by_email(email)
+        user_info = get_staff_information_by_email(email)
 
     if not user_info:
         return jsonify({'message': 'Invalid credentials'}), 401
@@ -84,18 +84,23 @@ def login():
     if not check_password_hash(user_info.get('password_hash'), password):
         return jsonify({'message': 'Invalid credentials'}), 401
 
+    actual_role = role
+    if role == 'staff':
+        actual_role = user_info.get('role')  # 'ARO', 'DRO'
+
     # create jwt token
     user_id = user_info.get('id')
     additional_claims = {
-        'role': role,
+        'role': actual_role,
         'user_id': user_id
     }
     access_token = create_access_token(identity=email, additional_claims=additional_claims)
 
     return jsonify({
         'access_token': access_token,
-        'role': role,
-        'user_id': user_id
+        'role': actual_role,
+        'user_id': user_id,
+        'name': f"{user_info.get('first_name')} {user_info.get('last_name')}"
     }), 200
 
 
