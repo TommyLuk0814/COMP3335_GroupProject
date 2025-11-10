@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>ComputingU</title>
+            </head>
+            <body>
+
+            <form action="/login" method="POST">
+                <div>
+                    <label>Account Type:</label>
+                    <div>
+                        <input type="radio" id="student" name="role" value="student" required>
+                        <label for="student">Student</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="guardian" name="role" value="guardian" required>
+                        <label for="guardian">Guardian</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="aro" name="role" value="aro" required>
+                        <label for="aro">ARO</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="dro" name="role" value="dro" required>
+                        <label for="dro">DRO</label>
+                    </div>
+                </div>
+                <div>
+                    <label for="username">Email:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+
+            </body>
+            </html>
