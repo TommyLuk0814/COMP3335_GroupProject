@@ -3,7 +3,7 @@ import mysql.connector
 DB_CONFIG = {
     "host": "210.6.24.3",
     "user": "root",
-    "password": "",
+    "password": "polyu",
     "database": "ComputingU",
     "port": 3306
 }
