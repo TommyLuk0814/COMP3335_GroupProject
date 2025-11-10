@@ -3,6 +3,7 @@ CREATE TABLE guardians (
     last_name VARCHAR(100) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     phone VARCHAR(20)
 );
 
@@ -33,6 +34,7 @@ CREATE TABLE students (
     identification_number VARCHAR(255),
     address VARCHAR(255),
     email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     enrollment_year YEAR,
     guardian_id INT,

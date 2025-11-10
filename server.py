@@ -1,16 +1,63 @@
-from flask import Flask, request, jsonify, send_from_directory
+import os
+
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from controller import *
 from sql_method_student_guardian import *
 from sql_method_ARO_DRO import *
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
 from werkzeug.security import check_password_hash, generate_password_hash
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='front/templates')
 
 app.config['JWT_SECRET_KEY'] = 'helloxixixixixixixixixixixixi'
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # Token exp in 1 hour
 
 jwt = JWTManager(app)
+
+
+@app.route("/")
+def serve_login_page():
+    """
+    when the user visits the website root directory (http://127.0.0.1:5000/),
+    display the login page.
+    """
+    # this will look for 'login.html' in the 'front/templates/' folder.
+    return render_template('login.html')
+
+
+@app.route('/<role_folder>/<page_name>')
+@jwt_required()
+def serve_protected_page(role_folder, page_name):
+    """
+    Dynamic routing:
+    - /student/profile.html
+    - /ARO/manage_grades.html
+    - /DRO/manage_disciplinary.html
+    """
+    try:
+        claims = get_jwt()
+        user_role = claims.get('role')
+
+        #only the matching role can access their pages
+        if (user_role == 'student' and role_folder == 'student') or \
+                (user_role == 'guardian' and role_folder == 'Guardian') or \
+                (user_role == 'ARO' and role_folder == 'ARO') or \
+                (user_role == 'DRO' and role_folder == 'DRO'):
+
+            # conbinate role_folder and page_name to form the path
+            # e.g., 'student/profile.html'
+            path = os.path.join(role_folder, page_name)
+
+            return render_template(path)
+        else:
+            # if the role aceess a page not belong to them
+            # say goodbye
+            return render_template('error.html', message="Access Denied"), 403
+
+    except Exception as e:
+        print(e)
+        return render_template('error.html', message="Page not found or error"), 404
+
 
 @app.route("/login", methods=["POST"])
 def login():
