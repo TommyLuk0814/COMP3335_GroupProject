@@ -81,7 +81,7 @@ def login():
         return jsonify({'message': 'Invalid credentials'}), 401
 
     # compare password hash
-    if not check_password_hash(user_info.get('password_hash'), password):
+    if not check_password_hash(user_info.get('password'), password):
         return jsonify({'message': 'Invalid credentials'}), 401
 
     actual_role = role

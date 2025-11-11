@@ -1,46 +1,26 @@
 from db import get_db_connection
-
-import hashlib
-import secrets
-import string
+from werkzeug.security import generate_password_hash
 
 def main():
+    test_password = "password123"
+    hashed = generate_password_hash(test_password)
+
     conn = get_db_connection()
     if not conn:
-        print("Connection failed")
+        print("fail to connect db")
         return
 
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        result = cursor.fetchone()
-        print("Connected. SELECT 1 ->", result)
-    except Exception as e:
-        print("Query failed:", e)
-    finally:
-        try:
-            cursor.close()
-        except Exception:
-            pass
-        conn.close()
+    cursor = conn.cursor()
 
-def generate_random_password(length=12):
-    "Generate a random password"
-    characters = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(secrets.choice(characters) for _ in range(length))
+    cursor.execute("UPDATE students SET password = %s", (hashed,))
+    cursor.execute("UPDATE guardians SET password = %s", (hashed,))
+    cursor.execute("UPDATE staffs SET password = %s", (hashed,))
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    conn.commit()
+    conn.close()
 
-# Generate three random passwords.
-for i in range(1, 4):
-    password = generate_random_password()
-    hashed = hash_password(password)
-    print(f"user {i}:")
-    print(f"  origin pw: {password}")
-    print(f"  hash pw: {hashed}")
-    print()
-
+    print(f"測試密碼：{test_password}")
+    print(f"Hash：{hashed}")
 
 if __name__ == "__main__":
     main()

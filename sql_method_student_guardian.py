@@ -32,7 +32,7 @@ def get_student_information_by_email(email):
         return {
             'id': row[0],
             'email': row[1],
-            'password_hash': row[2],
+            'password': row[2],
             'first_name': row[3],
             'last_name': row[4]
         }
@@ -50,7 +50,7 @@ def get_guardian_information_by_email(email):
         return {
             'id': row[0],
             'email': row[1],
-            'password_hash': row[2],
+            'password': row[2],
             'first_name': row[3],
             'last_name': row[4]
         }
