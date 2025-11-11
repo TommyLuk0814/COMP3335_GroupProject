@@ -82,7 +82,7 @@ def list_grades_by_student_id(student_id):
     WHERE g.student_id = %s
     ORDER BY g.term DESC
     """
-    result = execute_query(conn, sql, student_id)
+    result = execute_query(conn, sql, (student_id,))
     
     conn.close()
     return result
@@ -113,7 +113,7 @@ def modify_grades_sql(grade_id, grade, comments):
 def delete_grades_sql(grades_id):
     conn = get_db_connection()
     sql = "DELETE FROM grades WHERE id = %s"
-    result = execute_commit(conn, sql, grades_id)
+    result = execute_commit(conn, sql, (grades_id,))
     
     conn.close()
     return result
@@ -146,7 +146,7 @@ def list_disciplinary_by_student_id(student_id):
     WHERE d.student_id = %s
     ORDER BY d.date DESC
     """
-    result = execute_query(conn, sql, student_id)
+    result = execute_query(conn, sql, (student_id,))
     
     conn.close()
     return result
@@ -177,7 +177,7 @@ def modify_disciplinary_sql(disciplinary_id, descriptions):
 def delete_disciplinary_sql(disciplinary_id):
     conn = get_db_connection()
     sql = "DELETE FROM disciplinary_records WHERE id = %s"
-    result = execute_commit(conn, sql, disciplinary_id)
+    result = execute_commit(conn, sql, (disciplinary_id,))
     
     conn.close()
     return result

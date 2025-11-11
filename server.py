@@ -26,7 +26,7 @@ def serve_login_page():
 
 
 @app.route('/<role_folder>/<page_name>')
-@jwt_required()
+
 def serve_protected_page(role_folder, page_name):
     """
     Dynamic routing:
@@ -34,30 +34,39 @@ def serve_protected_page(role_folder, page_name):
     - /ARO/manage_grades.html
     - /DRO/manage_disciplinary.html
     """
+    # try:
+    #     claims = get_jwt()
+    #     user_role = claims.get('role')
+    #
+    #     #only the matching role can access their pages
+    #     if (user_role == 'student' and role_folder == 'student') or \
+    #             (user_role == 'guardian' and role_folder == 'Guardian') or \
+    #             (user_role == 'ARO' and role_folder == 'ARO') or \
+    #             (user_role == 'DRO' and role_folder == 'DRO'):
+    #
+    #         # conbinate role_folder and page_name to form the path
+    #         # e.g., 'student/profile.html'
+    #         path = os.path.join(role_folder, page_name)
+    #
+    #         return render_template(path)
+    #     else:
+    #         # if the role aceess a page not belong to them
+    #         # say goodbye
+    #         return render_template('error.html', message="Access Denied"), 403
+    #
+    # except Exception as e:
+    #     print(e)
+    #     return render_template('error.html', message="Page not found or error"), 404
+    path = os.path.join(role_folder, page_name)
+
     try:
-        claims = get_jwt()
-        user_role = claims.get('role')
-
-        #only the matching role can access their pages
-        if (user_role == 'student' and role_folder == 'student') or \
-                (user_role == 'guardian' and role_folder == 'Guardian') or \
-                (user_role == 'ARO' and role_folder == 'ARO') or \
-                (user_role == 'DRO' and role_folder == 'DRO'):
-
-            # conbinate role_folder and page_name to form the path
-            # e.g., 'student/profile.html'
-            path = os.path.join(role_folder, page_name)
-
-            return render_template(path)
-        else:
-            # if the role aceess a page not belong to them
-            # say goodbye
-            return render_template('error.html', message="Access Denied"), 403
-
+        #
+        # the jwt protect move to the website's js
+        path = os.path.join(role_folder, page_name)
+        return render_template(path)
     except Exception as e:
         print(e)
         return render_template('error.html', message="Page not found or error"), 404
-
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -147,6 +156,7 @@ def check_disciplinary():
     return result
 
 @app.route("/list_grades", methods=["GET"])
+@jwt_required()
 def list_grades():
     # ARO Only
     
@@ -161,6 +171,7 @@ def list_grades():
     
 
 @app.route("/add_grades", methods=["POST"])
+@jwt_required()
 def add_grades():
     # ARO Only
     
@@ -178,6 +189,7 @@ def add_grades():
     
 
 @app.route("/modify_grades", methods=["PUT"])
+@jwt_required()
 def modify_grades():
     # ARO Only
     
@@ -193,6 +205,7 @@ def modify_grades():
     
 
 @app.route("/delete_grades", methods=["DELETE"])
+@jwt_required()
 def delete_grades():
     # ARO Only
     
@@ -264,6 +277,7 @@ def guardian_children():
     return result
 
 @app.route("/list_student", methods=["GET"])
+@jwt_required()
 def list_student():
     # ARO and DRO
     
@@ -271,6 +285,7 @@ def list_student():
     return jsonify(result) if result else jsonify([])
 
 @app.route("/list_course", methods=["GET"])
+@jwt_required()
 def list_course():
     # ARO only
     
