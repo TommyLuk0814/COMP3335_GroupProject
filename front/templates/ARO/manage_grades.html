@@ -254,10 +254,11 @@
                     const gradeId = grade[0];
                     const studentId = grade[1];
                     const studentName = `${grade[2]} ${grade[3]}`;
-                    const courseName = grade[4];
-                    const term = grade[5];
-                    const gradeValue = grade[6];
-                    const comments = grade[7];
+                    const courseId = grade[4];      // ← 修正：course_id
+                    const courseName = grade[5];    // ← 修正：course_name
+                    const term = grade[6];          // ← 修正：term
+                    const gradeValue = grade[7];    // ← 修正：grade
+                    const comments = grade[8];
 
                     tr.innerHTML = `
                         <td>${studentName}</td>
@@ -269,45 +270,13 @@
                             <button class="edit-btn"
                                     data-id="${gradeId}"
                                     data-student-id="${studentId}"
-                                    data-course-id="${grade[4]}"
+                                    data-course-id="${courseId}"
                                     data-term="${term}"
                                     data-grade="${gradeValue}"
                                     data-comments="${comments}">Edit</button>
                             <button class="delete-btn" data-id="${gradeId}">Delete</button>
                         </td>
                     `;
-                    // 注意: data-course-id 這裡我們用 courseName 比較難反查 ID，
-                    // 編輯時需要特別處理。
-                    // 更好的做法是讓 /list_grades API 回傳 course_id
-                    // 假設 `list_grades_by_student_id` 和 `list_all_grades_sql` 回傳的 course_id 在 grade[4] (course_name) 的位置
-                    // 為了簡單起見，我們假設 `list_all_grades_sql` 查詢修改為回傳 course_id
-                    // SELECT g.id, g.student_id, s.first_name, s.last_name, g.course_id, c.course_name, g.term, g.grade, g.comments
-                    // 如果沒改，我們在編輯時就不能預選 course。
-                    // *** 假設您的 API 回傳的 grade[4] (c.course_name) ***
-                    // *** 編輯時我們無法輕易反向設定 course_id。
-                    // *** 這裡我們假設 `list_all_grades_sql` 查詢 SELECT ... c.course_name ...
-
-                    // 為了讓 "Edit" 正常運作，我們需要 course_id 和 student_id
-                    // 您的 `list_all_grades_sql` 並未 SELECT g.course_id
-                    // 最好修改 `sql_method_ARO_DRO.py` 中的 `list_all_grades_sql` 和 `list_grades_by_student_id`
-                    // 增加 `g.course_id` 到 SELECT 列表中。
-                    // 假設修改後: g.id[0], g.student_id[1], s.first_name[2], s.last_name[3], g.course_id[4], c.course_name[5], g.term[6], g.grade[7], g.comments[8]
-
-                    // *** 暫時使用您目前的 SQL 輸出 (grade[4] = c.course_name) ***
-                    // 我們將無法在 "Edit" 時預選 Student 和 Course
-
-
-
-
-
-                    // g.id[0], g.student_id[1], s.first_name[2], s.last_name[3], c.course_name[4], g.term[5], g.grade[6], g.comments[7]
-
-                    const editBtn = tr.querySelector('.edit-btn');
-                    editBtn.dataset.studentId = studentId; // [1]
-                    // editBtn.dataset.courseId = grade[??]; // 我們沒有 course_id
-                    editBtn.dataset.term = term; // [5]
-                    editBtn.dataset.grade = gradeValue; // [6]
-                    editBtn.dataset.comments = comments; // [7]
 
                     gradesTbody.appendChild(tr);
                 });
@@ -341,11 +310,11 @@
                 loadGrades();
             });
 
-            // 提交表單 (新增或更新)
-            gradeForm.addEventListener('submit', async (e) => {
-                e.preventDefault(); // 阻止表單預設提交
 
-                const id = gradeIdInput.value;
+
+            gradeForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
                 const data = {
                     student_id: studentSelect.value,
                     course_id: courseSelect.value,
@@ -355,36 +324,20 @@
                 };
 
                 try {
-                    if (id) {
-                        // 更新 (PUT)
-                        // 根據 server.py，/modify_grades 需要 grade_id, grade, comments
-                        const updateData = {
-                            grade_id: id,
-                            grade: data.grade,
-                            comments: data.comments
-                        };
-                        await apiFetch('/modify_grades', {
-                            method: 'PUT',
-                            body: JSON.stringify(updateData)
-                        });
-                        alert('Grade updated successfully!');
-                    } else {
-                        // 新增 (POST)
-                        // 根據 server.py，/add_grades 需要 student_id, course_id, term, grade, comments
-                        await apiFetch('/add_grades', {
-                            method: 'POST',
-                            body: JSON.stringify(data)
-                        });
-                        alert('Grade added successfully!');
-                    }
+                    const result = await apiFetch('/add_grades', {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
 
+                    alert(`Grade ${result.action}!`);
                     resetForm();
-                    loadGrades(filterStudentSelect.value); // 重新載入表格
+                    loadGrades(filterStudentSelect.value);
 
                 } catch (error) {
                     alert('Failed to save grade. ' + error.message);
                 }
             });
+
 
             // 表格點擊 (處理編輯和刪除)
             gradesTbody.addEventListener('click', async (e) => {
@@ -392,33 +345,29 @@
                 const id = target.dataset.id;
 
                 if (target.classList.contains('edit-btn')) {
-                    // 編輯按鈕
-                    // 從 data-* 屬性中獲取數據
-                    const { studentId, term, grade, comments } = target.dataset;
+                    const { studentId, courseId, term, grade, comments } = target.dataset;
 
-                    // 填入表單
-                    gradeIdInput.value = id;
+                    // 获取表格中显示的课程名称
+                    const courseName = target.closest('tr').children[1].textContent;
+
                     studentSelect.value = studentId;
-                    // courseSelect.value = courseId; // 如前所述，我們缺少 course_id
+                    courseSelect.value = courseId;
                     termInput.value = term;
                     gradeSelect.value = grade;
                     commentsInput.value = comments;
 
-                    // (如果缺少 course_id，我們至少要禁用 course select 或提醒用戶)
-                    // 暫時禁用 Student 和 Course，因為我們只允許修改 Grade 和 Comments
-                    studentSelect.disabled = true;
-                    courseSelect.disabled = true;
-                    termInput.disabled = true;
+                    // 通过课程名称匹配 courseSelect
+<!--                    for (let option of courseSelect.options) {-->
+<!--                        if (option.textContent === courseName) {-->
+<!--                            courseSelect.value = option.value;-->
+<!--                            break;-->
+<!--                        }-->
+<!--                    }-->
 
-                    const message = [
-                        'Editing Record.',
-                        '',
-                        'Student, Staff, and Date are locked.',
-                        'Only Descriptions can be modified.'
-                    ].join('\n');
-                    alert(message);
+                    alert('You can modify and resubmit. Backend will automatically update if record exists.');
                     window.scrollTo(0, 0);
                 }
+
 
                 if (target.classList.contains('delete-btn')) {
 
@@ -440,7 +389,6 @@
             // 重設表單
             function resetForm() {
                 gradeForm.reset();
-                gradeIdInput.value = '';
                 // 重新啟用下拉選單
                 studentSelect.disabled = false;
                 courseSelect.disabled = false;

@@ -59,12 +59,12 @@ def get_staff_information_by_email(email):
 def list_all_grades_sql():
     conn = get_db_connection()
     sql = """
-    SELECT g.id, g.student_id, s.first_name, s.last_name, 
-           c.course_name, g.term, g.grade, g.comments
+    SELECT g.id, g.student_id, s.first_name, s.last_name,
+       g.course_id, c.course_name, g.term, g.grade, g.comments
     FROM grades g
     JOIN students s ON g.student_id = s.id
     JOIN courses c ON g.course_id = c.id
-    ORDER BY g.term DESC, s.last_name, s.first_name
+    ORDER BY s.last_name, s.first_name
     """
     result = execute_query(conn, sql)
     
