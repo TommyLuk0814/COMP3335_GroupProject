@@ -83,7 +83,7 @@
         <select id="filterStudent">
             <option value="">All Students</option>
         </select>
-        <button id="filterBtn">Filter</button>
+        <button id="filterBtn">Search</button>
         <button id="showAllBtn">Show All</button>
     </div>
 
@@ -103,21 +103,21 @@
     </table>
 
     <script>
-        // DOM 載入完成後執行
+
         document.addEventListener('DOMContentLoaded', () => {
 
-            // 從 localStorage 獲取 JWT
+
             const token = localStorage.getItem('access_token');
             const userName = localStorage.getItem('name');
 
-            // 檢查 token，如果不存在則跳轉回登入頁面
+            // Check the token, if it does not exist, then jump back to the login page.
             if (!token) {
                 alert('You are not logged in. Redirecting to login page.');
                 window.location.href = '/';
                 return;
             }
 
-            // 獲取 DOM 元素
+
             const gradeForm = document.getElementById('gradeForm');
             const gradeIdInput = document.getElementById('gradeId');
             const studentSelect = document.getElementById('studentId');
@@ -134,8 +134,7 @@
 
             const gradesTbody = document.getElementById('gradesTbody');
 
-            // --- API 呼叫的通用函式 ---
-            // 封裝 fetch，自動加入 Token
+
             async function apiFetch(url, options = {}) {
                 const headers = {
                     'Content-Type': 'application/json',
@@ -150,8 +149,9 @@
                 try {
                     const response = await fetch(url, config);
 
+                    // Token maybe expired
                     if (response.status === 401) {
-                        // Token 過期或無效
+
                         alert('Session expired. Please log in again.');
                         logout();
                         return;
@@ -162,7 +162,7 @@
                         throw new Error(errorData.message || 'API request failed');
                     }
 
-                    // DELETE 請求可能沒有 JSON 回應
+
                     if (response.status === 204 || options.method === 'DELETE') {
                         return { success: true };
                     }
@@ -410,12 +410,18 @@
                     courseSelect.disabled = true;
                     termInput.disabled = true;
 
-                    alert('Editing Grade. Student, Course, and Term are locked. Only Grade and Comments can be modified.');
-                    window.scrollTo(0, 0); // 滾動到頁面頂部
+                    const message = [
+                        'Editing Record.',
+                        '',
+                        'Student, Staff, and Date are locked.',
+                        'Only Descriptions can be modified.'
+                    ].join('\n');
+                    alert(message);
+                    window.scrollTo(0, 0);
                 }
 
                 if (target.classList.contains('delete-btn')) {
-                    // 刪除按鈕
+
                     if (confirm(`Are you sure you want to delete grade record ${id}?`)) {
                         try {
                             // 根據 server.py，使用 URL 參數

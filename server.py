@@ -182,10 +182,15 @@ def add_grades():
     term = data.get('term')
     grade = data.get('grade')
     comments = data.get('comments', '')
-    
-    result = add_grades_sql(student_id, course_id, term, grade, comments)
-    
-    return jsonify({'success': result})
+
+    existing_grade_id = check_grade_exists(student_id, course_id, term)
+    if existing_grade_id:
+        # if the grade record exists, modify it instead
+        result = modify_grades_sql(existing_grade_id, grade, comments)
+        return jsonify({'success': result, 'action': 'modified'})
+    else:
+        result = add_grades_sql(student_id, course_id, term, grade, comments)
+        return jsonify({'success': result, 'action': 'added'})
     
 
 @app.route("/modify_grades", methods=["PUT"])
@@ -239,10 +244,17 @@ def add_disciplinary():
     staff_id = data.get('staff_id')
     date = data.get('date')
     descriptions = data.get('descriptions')
-    
-    result = add_disciplinary_sql(student_id, staff_id, date, descriptions)
-    
-    return jsonify({'success': result})
+
+
+    existing_record_id = check_disciplinary_exists(student_id, date)
+    if existing_record_id:
+        # if the grade record exists, modify it instead
+        result = modify_disciplinary_sql(existing_record_id, descriptions)
+        return jsonify({'success': result, 'action': 'modified'})
+    else:
+        result = add_disciplinary_sql(student_id, staff_id, date, descriptions)
+        return jsonify({'success': result, 'action': 'added'})
+
 
 @app.route("/modify_disciplinary", methods=["PUT"])
 def modify_disciplinary():

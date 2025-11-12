@@ -87,6 +87,32 @@ def list_grades_by_student_id(student_id):
     conn.close()
     return result
 
+
+def check_grade_exists(student_id, course_id, term):
+    conn = get_db_connection()
+    sql = """
+    SELECT id FROM grades 
+    WHERE student_id = %s AND course_id = %s AND term = %s
+    """
+    result = execute_query(conn, sql, (student_id, course_id, term))
+
+    conn.close()
+    return result[0][0] if result and len(result) > 0 else None
+
+
+def check_disciplinary_exists(student_id, date):
+    conn = get_db_connection()
+    sql = """
+    SELECT id FROM disciplinary_records 
+    WHERE student_id = %s AND date = %s
+    """
+    result = execute_query(conn, sql, (student_id, date))
+
+    conn.close()
+    return result[0][0] if result and len(result) > 0 else None
+
+
+
 def add_grades_sql(student_id, course_id, term, grade, comments=""):
     conn = get_db_connection()
     sql = """

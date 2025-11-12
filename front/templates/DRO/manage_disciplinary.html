@@ -67,7 +67,7 @@
         <select id="filterStudent">
             <option value="">All Students</option>
         </select>
-        <button id="filterBtn">Filter</button>
+        <button id="filterBtn">Search</button>
         <button id="showAllBtn">Show All</button>
     </div>
 
@@ -97,7 +97,7 @@
                 return;
             }
 
-            // --- DOM 元素 ---
+
             const recordForm = document.getElementById('recordForm');
             const disciplinaryIdInput = document.getElementById('disciplinaryId');
             const studentSelect = document.getElementById('studentId');
@@ -113,7 +113,7 @@
 
             const recordsTbody = document.getElementById('recordsTbody');
 
-            // --- API 呼叫的通用函式 ---
+
             async function apiFetch(url, options = {}) {
                 const headers = {
                     'Content-Type': 'application/json',
@@ -143,12 +143,12 @@
                 }
             }
 
-            // --- 載入初始數據 ---
+            // --- Load initial data ---
 
-            // 載入學生列表
+
             async function loadStudents() {
                 try {
-                    const students = await apiFetch('/list_student'); // 呼叫 API
+                    const students = await apiFetch('/list_student');
                     studentSelect.innerHTML = '<option value="">Select Student</option>';
                     filterStudentSelect.innerHTML = '<option value="">All Students</option>';
 
@@ -164,10 +164,10 @@
                 }
             }
 
-            // 載入教職員列表
+
             async function loadStaff() {
                 try {
-                    const staff = await apiFetch('/list_staff'); // 呼叫 API
+                    const staff = await apiFetch('/list_staff');
                     staffSelect.innerHTML = '<option value="">Select Staff</option>';
 
                     staff.forEach(person => {
@@ -182,9 +182,8 @@
                 }
             }
 
-            // --- 載入紀律記錄 ---
 
-            // 載入紀律記錄 (可選 student_id 過濾)
+
             async function loadRecords(studentId = null) {
                 let url = '/list_disciplinary';
                 if (studentId) {
@@ -200,26 +199,15 @@
                 }
             }
 
-            // 渲染紀律記錄表格
+            // Rendering Discipline Record Table
             function renderRecordsTable(records) {
-                recordsTbody.innerHTML = ''; // 清空表格
+                recordsTbody.innerHTML = '';       //clear from
                 if (!records || records.length === 0) {
                     recordsTbody.innerHTML = '<tr><td colspan="5">No records found.</td></tr>';
                     return;
                 }
 
-                // 根據 sql_method_ARO_DRO.py 中的 list_all_disciplinary_sql()
-                // 回傳順序: d.id[0], d.student_id[1], s.first_name[2], s.last_name[3],
-                //            d.date[4], st.first_name[5], st.last_name[6], d.descriptions[7],
-                //            d.staff_id[?] (我們需要 staff_id 才能編輯)
 
-                // *** 假設您修改 SQL 查詢，在最後加入 d.staff_id AS staff_id ***
-                // 假設 d.staff_id 是索引 [8]
-
-                // *** 暫時使用您 *目前* 的 SQL 輸出 ***
-                // 我們將無法在 "Edit" 時預選 Staff
-                // 我們需要 d.staff_id
-                // *** 假設您已修改 SQL，d.staff_id 在索引 [8] ***
 
                 records.forEach(record => {
                     const tr = document.createElement('tr');
@@ -231,9 +219,7 @@
                     const staffName = `${record[5]} ${record[6]}`;
                     const descriptions = record[7];
 
-                    // 假設 SQL 查詢已修改為 SELECT ..., d.staff_id (在索引 8)
-                    // const staffId = record[8];
-                    // 如果 SQL 沒修改，我們只能在 data- 屬性中留空
+
 
                     tr.innerHTML = `
                         <td>${studentName}</td>
@@ -250,18 +236,13 @@
                             <button class="delete-btn" data-id="${recordId}">Delete</button>
                         </td>
                     `;
-                    // 注意: 為了讓 "Edit" 正常運作，
-                    // 您的 `list_all_disciplinary_sql` 和 `list_disciplinary_by_student_id`
-                    // 必須 SELECT ... d.staff_id
-                    // 假設修改後 d.staff_id 在索引 [8]
-                    // const editBtn = tr.querySelector('.edit-btn');
-                    // editBtn.dataset.staffId = record[8];
+
 
                     recordsTbody.appendChild(tr);
                 });
             }
 
-            // --- 事件監聽 ---
+
 
             logoutButton.addEventListener('click', logout);
 
@@ -285,7 +266,7 @@
                 loadRecords();
             });
 
-            // 提交表單 (新增或更新)
+            // submit from
             recordForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
@@ -299,8 +280,7 @@
 
                 try {
                     if (id) {
-                        // 更新 (PUT)
-                        // 根據 server.py，/modify_disciplinary 需要 disciplinary_id, descriptions
+
                         const updateData = {
                             disciplinary_id: id,
                             descriptions: data.descriptions
@@ -311,8 +291,8 @@
                         });
                         alert('Record updated successfully!');
                     } else {
-                        // 新增 (POST)
-                        // 根據 server.py，/add_disciplinary 需要 student_id, staff_id, date, descriptions
+
+
                         await apiFetch('/add_disciplinary', {
                             method: 'POST',
                             body: JSON.stringify(data)
@@ -321,48 +301,47 @@
                     }
 
                     resetForm();
-                    loadRecords(filterStudentSelect.value); // 重新載入表格
+                    loadRecords(filterStudentSelect.value);
 
                 } catch (error) {
                     alert('Failed to save record. ' + error.message);
                 }
             });
 
-            // 表格點擊 (處理編輯和刪除)
             recordsTbody.addEventListener('click', async (e) => {
                 const target = e.target;
                 const id = target.dataset.id;
 
                 if (target.classList.contains('edit-btn')) {
-                    // 編輯按鈕
                     const { studentId, staffId, date, descriptions } = target.dataset;
 
-                    // 填入表單
+
                     disciplinaryIdInput.value = id;
                     studentSelect.value = studentId;
-                    staffSelect.value = staffId; // (如果 data-staff-id 有值)
-                    dateInput.value = date.split('T')[0]; // 處理日期格式
+                    staffSelect.value = staffId;
+                    dateInput.value = date.split('T')[0];
                     descriptionsInput.value = descriptions;
 
-                    // 根據 SQL 邏輯，只允許修改 descriptions
+
                     studentSelect.disabled = true;
                     staffSelect.disabled = true;
                     dateInput.disabled = true;
 
-                    alert('Editing Record. Student, Staff, and Date are locked. Only Descriptions can be modified.');
-                    window.scrollTo(0, 0); // 滾動到頁面頂部
+                    alert('Record loaded to Add/Edit form.\n\nStudent, Staff, and Date are locked.\nOnly Descriptions can be modified.');
+                    window.scrollTo(0, 0);
                 }
 
+                //delete button
                 if (target.classList.contains('delete-btn')) {
-                    // 刪除按鈕
+
                     if (confirm(`Are you sure you want to delete record ${id}?`)) {
                         try {
-                            // 根據 server.py，使用 URL 參數
+
                             await apiFetch(`/delete_disciplinary?disciplinary_id=${id}`, {
                                 method: 'DELETE'
                             });
                             alert('Record deleted successfully!');
-                            loadRecords(filterStudentSelect.value); // 重新載入表格
+                            loadRecords(filterStudentSelect.value);
                         } catch (error) {
                             alert('Failed to delete record. ' + error.message);
                         }
@@ -370,17 +349,20 @@
                 }
             });
 
-            // 重設表單
+            // reset form
             function resetForm() {
                 recordForm.reset();
                 disciplinaryIdInput.value = '';
-                // 重新啟用下拉選單
                 studentSelect.disabled = false;
                 staffSelect.disabled = false;
                 dateInput.disabled = false;
+
+                const formTitle = document.querySelector('h2');
+                formTitle.textContent = 'Add / Edit Record';
+                formTitle.style.color = '#555';
             }
 
-            // --- 初始化頁面 ---
+            // --- init print user name on the top--
             function initializePage() {
                 if (userName) {
                     const welcome = document.createElement('h2');
@@ -389,7 +371,7 @@
                 }
                 loadStudents();
                 loadStaff();
-                loadRecords(); // 初始載入所有記錄
+                loadRecords();
             }
 
             initializePage();
