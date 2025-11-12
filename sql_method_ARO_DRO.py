@@ -115,14 +115,35 @@ def check_disciplinary_exists(student_id, date):
 
 def add_grades_sql(student_id, course_id, term, grade, comments=""):
     conn = get_db_connection()
-    sql = """
-    INSERT INTO grades (student_id, course_id, term, grade, comments)
-    VALUES (%s, %s, %s, %s, %s)
-    """
-    result = execute_commit(conn, sql, (student_id, course_id, term, grade, comments))
+    if not conn:
+        return False
     
-    conn.close()
-    return result
+    try:
+        # 1. check if exist
+        check_sql = """
+        SELECT id FROM grades 
+        WHERE student_id = %s AND course_id = %s AND term = %s
+        """
+        with conn.cursor() as cursor:
+            cursor.execute(check_sql, (student_id, course_id, term))
+            existing_record = cursor.fetchone()
+            
+            if existing_record:
+                return False  
+        
+        # 2. not exist,do:
+        insert_sql = """
+        INSERT INTO grades (student_id, course_id, term, grade, comments)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        result = execute_commit(conn, insert_sql, (student_id, course_id, term, grade, comments))
+        return result
+        
+    except Exception as e:
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 def modify_grades_sql(grade_id, grade, comments):
     conn = get_db_connection()
