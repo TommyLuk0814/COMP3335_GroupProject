@@ -4,16 +4,42 @@ from flask import Flask, request, jsonify, send_from_directory, render_template
 from controller import *
 from sql_method_student_guardian import *
 from sql_method_ARO_DRO import *
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, JWTManager, get_jwt
+from flask_jwt_extended import (
+    create_access_token, jwt_required, get_jwt_identity,
+    JWTManager, get_jwt, set_access_cookies, unset_jwt_cookies
+)
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from functools import wraps
+
 
 app = Flask(__name__, template_folder='front/templates')
 
 app.config['JWT_SECRET_KEY'] = 'helloxixixixixixixixixixixixi'
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # Token exp in 1 hour
-
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600 #token expires in 1 hour
+app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
+
+def roles_required(required_roles):
+
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            # Ensure that the JWT exists first.
+            claims = get_jwt()
+            user_role = claims.get('role')
+
+            if user_role not in required_roles:
+                return jsonify({'message': f'Access denied: Role "{user_role}" is not authorized.'}), 403
+
+            # If the role is a match, then execute the original routing function.
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 @app.route("/")
 def serve_login_page():
@@ -26,47 +52,33 @@ def serve_login_page():
 
 
 @app.route('/<role_folder>/<page_name>')
-
+@jwt_required()
 def serve_protected_page(role_folder, page_name):
-    """
-    Dynamic routing:
-    - /student/profile.html
-    - /ARO/manage_grades.html
-    - /DRO/manage_disciplinary.html
-    """
-    # try:
-    #     claims = get_jwt()
-    #     user_role = claims.get('role')
-    #
-    #     #only the matching role can access their pages
-    #     if (user_role == 'student' and role_folder == 'student') or \
-    #             (user_role == 'guardian' and role_folder == 'Guardian') or \
-    #             (user_role == 'ARO' and role_folder == 'ARO') or \
-    #             (user_role == 'DRO' and role_folder == 'DRO'):
-    #
-    #         # conbinate role_folder and page_name to form the path
-    #         # e.g., 'student/profile.html'
-    #         path = os.path.join(role_folder, page_name)
-    #
-    #         return render_template(path)
-    #     else:
-    #         # if the role aceess a page not belong to them
-    #         # say goodbye
-    #         return render_template('error.html', message="Access Denied"), 403
-    #
-    # except Exception as e:
-    #     print(e)
-    #     return render_template('error.html', message="Page not found or error"), 404
-    path = os.path.join(role_folder, page_name)
-
     try:
-        #
-        # the jwt protect move to the website's js
-        path = os.path.join(role_folder, page_name)
-        return render_template(path)
+        claims = get_jwt()
+        user_role = claims.get('role')
+
+        # make a mapping between roles and folder names
+        role_to_folder_map = {
+            'student': 'student',
+            'guardian': 'Guardian',
+            'ARO': 'ARO',
+            'DRO': 'DRO'
+        }
+
+        # Check if the logged-in user's role corresponds to the folder they want to access.
+        if role_to_folder_map.get(user_role) == role_folder:
+            # correct role
+            path = os.path.join(role_folder, page_name)
+            return render_template(path)
+        else:
+            return render_template('error.html', message="Access Denied. Invalid role."), 403
+
     except Exception as e:
         print(e)
-        return render_template('error.html', message="Page not found or error"), 404
+        # token invalid or expired
+        return render_template('error.html', message="Page not found or session expired."), 404
+
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -106,12 +118,28 @@ def login():
     }
     access_token = create_access_token(identity=email, additional_claims=additional_claims)
 
-    return jsonify({
+    response_data = {
         'access_token': access_token,
         'role': actual_role,
         'user_id': user_id,
         'name': f"{user_info.get('first_name')} {user_info.get('last_name')}"
-    }), 200
+    }
+
+
+    resp = jsonify(response_data)
+
+
+    set_access_cookies(resp, access_token)
+
+    return resp, 200
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    resp = jsonify({'message': 'Logout successful'})
+    # clear jwt cookei
+    unset_jwt_cookies(resp)
+    return resp, 200
+
 
 
 @app.route("/check_information", methods=["GET"])
@@ -122,7 +150,6 @@ def check_information():
     role = claims.get('role')
     user_id = claims.get('user_id')
 
-    # 只允許 student 和 guardian
     if role not in ['student', 'guardian']:
         return jsonify({'message': 'Access denied'}), 403
 
@@ -158,6 +185,7 @@ def check_disciplinary():
 
 @app.route("/list_grades", methods=["GET"])
 @jwt_required()
+@roles_required(['ARO'])
 def list_grades():
     # ARO Only
     
@@ -173,6 +201,7 @@ def list_grades():
 
 @app.route("/add_grades", methods=["POST"])
 @jwt_required()
+@roles_required(['ARO'])
 def add_grades():
     # ARO Only
     
@@ -196,6 +225,7 @@ def add_grades():
 
 @app.route("/modify_grades", methods=["PUT"])
 @jwt_required()
+@roles_required(['ARO'])
 def modify_grades():
     # ARO Only
     
@@ -212,6 +242,7 @@ def modify_grades():
 
 @app.route("/delete_grades", methods=["DELETE"])
 @jwt_required()
+@roles_required(['ARO'])
 def delete_grades():
     # ARO Only
     
@@ -223,6 +254,8 @@ def delete_grades():
     
 
 @app.route("/list_disciplinary", methods=["GET"])
+@jwt_required()
+@roles_required(['DRO'])
 def list_disciplinary():
     # DRO Only
     
@@ -237,6 +270,7 @@ def list_disciplinary():
 
 @app.route("/add_disciplinary", methods=["POST"])
 @jwt_required()
+@roles_required(['DRO'])
 def add_disciplinary():
     # DRO Only
     
@@ -260,6 +294,7 @@ def add_disciplinary():
 
 @app.route("/modify_disciplinary", methods=["PUT"])
 @jwt_required()
+@roles_required(['DRO'])
 def modify_disciplinary():
     # DRO Only
     
@@ -274,6 +309,8 @@ def modify_disciplinary():
     return jsonify({'success': result})
 
 @app.route("/delete_disciplinary", methods=["DELETE"])
+@jwt_required()
+@roles_required(['DRO'])
 def delete_disciplinary():
     # DRO Only
     
@@ -282,15 +319,17 @@ def delete_disciplinary():
     result = delete_disciplinary_sql(disciplinary_id)
     return jsonify({'success': result})
 
-@app.route("/guardian_children", methods=["DELETE"])
+@app.route("/guardian_children", methods=["GET"])
+@jwt_required()
+@roles_required(['guardian'])
 def guardian_children():
-    # guardian Only
-    
-    guardian_id = request.args.get('GET')
-    
+    claims = get_jwt()
+    guardian_id = claims.get('user_id')
+
     result = get_student_information_by_guardian_id(guardian_id)
-    
-    return result
+
+    return jsonify(result) if result else jsonify([])
+
 
 @app.route("/list_student", methods=["GET"])
 @jwt_required()

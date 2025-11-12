@@ -227,11 +227,25 @@
 
             logoutButton.addEventListener('click', logout);
 
-            function logout() {
+            async function logout() {
+                try {
+
+                    await apiFetch('/logout', {
+                        method: 'POST'
+                    });
+
+                } catch (error) {
+                    // Even if the backend call fails, we still continue to clear the data on the frontend
+                    console.error('Logout API call failed, proceeding with client-side logout:', error);
+                }
+
+
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('role');
                 localStorage.removeItem('user_id');
                 localStorage.removeItem('name');
+
+
                 window.location.href = '/';
             }
 
