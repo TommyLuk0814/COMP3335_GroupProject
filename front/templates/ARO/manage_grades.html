@@ -1,427 +1,411 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>ARO - Manage Grades</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        h2 { color: #555; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        form { background: #fdfdfd; border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        div { margin-bottom: 10px; }
-        label { display: inline-block; width: 100px; }
-        input[type="text"], select { padding: 5px; width: 250px; }
-        button { padding: 5px 10px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        button:hover { background-color: #0056b3; }
-        button.edit-btn { background-color: #ffc107; }
-        button.edit-btn:hover { background-color: #e0a800; }
-        button.delete-btn { background-color: #dc3545; }
-        button.delete-btn:hover { background-color: #c82333; }
-        button.clear-btn { background-color: #6c757d; }
-        button.clear-btn:hover { background-color: #5a6268; }
-        #logoutButton { background-color: #d9534f; float: right; }
-        #logoutButton:hover { background-color: #c9302c; }
-    </style>
-</head>
-<body>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>ARO - Manage Grades</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { color: #333; }
+                    h2 { color: #555; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    form { background: #fdfdfd; border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                    div { margin-bottom: 10px; }
+                    label { display: inline-block; width: 100px; }
+                    input[type="text"], select { padding: 5px; width: 250px; }
+                    button { padding: 5px 10px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+                    button:hover { background-color: #0056b3; }
+                    button.edit-btn { background-color: #ffc107; }
+                    button.edit-btn:hover { background-color: #e0a800; }
+                    button.delete-btn { background-color: #dc3545; }
+                    button.delete-btn:hover { background-color: #c82333; }
+                    button.clear-btn { background-color: #6c757d; }
+                    button.clear-btn:hover { background-color: #5a6268; }
+                    #logoutButton { background-color: #d9534f; float: right; }
+                    #logoutButton:hover { background-color: #c9302c; }
+                </style>
+            </head>
+            <body>
+
+                <button id="logoutButton">Logout</button>
+                <h1>ARO Grade Management</h1>
+
+                <h2>Add / Edit Grade</h2>
+                <form id="gradeForm">
+                    <input type="hidden" id="gradeId" name="gradeId">
+
+                    <div>
+                        <label for="studentId">Student:</label>
+                        <select id="studentId" name="studentId" required>
+                            <option value="">Loading students...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="courseId">Course:</label>
+                        <select id="courseId" name="courseId" required>
+                            <option value="">Loading courses...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="term">Term:</label>
+                        <input type="text" id="term" name="term" placeholder="e.g., 202526S1" required>
+                    </div>
+                    <div>
+                        <label for="grade">Grade:</label>
+                        <select id="grade" name="grade" required>
+                            <option value="">Select Grade</option>
+                            <option value="A">A</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B">B</option>
+                            <option value="B-">B-</option>
+                            <option value="C+">C+</option>
+                            <option value="C">C</option>
+                            <option value="C-">C-</option>
+                            <option value="D+">D+</option>
+                            <option value="D">D</option>
+                            <option value="F">F</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="comments">Comments:</label>
+                        <input type="text" id="comments" name="comments">
+                    </div>
+                    <button type="submit">Save Grade</button>
+                    <button type="button" class="clear-btn" id="clearBtn">Clear Form</button>
+                </form>
+
+                <h2>Grades List</h2>
+                <div>
+                    <label for="filterStudent">Filter by Student:</label>
+                    <select id="filterStudent">
+                        <option value="">All Students</option>
+                    </select>
+                    <button id="filterBtn">Search</button>
+                    <button id="showAllBtn">Show All</button>
+                </div>
+
+                <table id="gradesTable">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Course</th>
+                            <th>Term</th>
+                            <th>Grade</th>
+                            <th>Comments</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gradesTbody">
+                        </tbody>
+                </table>
 
-    <button id="logoutButton">Logout</button>
-    <h1>ARO Grade Management</h1>
+                <script>
 
-    <h2>Add / Edit Grade</h2>
-    <form id="gradeForm">
-        <input type="hidden" id="gradeId" name="gradeId">
+                    document.addEventListener('DOMContentLoaded', () => {
 
-        <div>
-            <label for="studentId">Student:</label>
-            <select id="studentId" name="studentId" required>
-                <option value="">Loading students...</option>
-            </select>
-        </div>
-        <div>
-            <label for="courseId">Course:</label>
-            <select id="courseId" name="courseId" required>
-                <option value="">Loading courses...</option>
-            </select>
-        </div>
-        <div>
-            <label for="term">Term:</label>
-            <input type="text" id="term" name="term" placeholder="e.g., 202526S1" required>
-        </div>
-        <div>
-            <label for="grade">Grade:</label>
-            <select id="grade" name="grade" required>
-                <option value="">Select Grade</option>
-                <option value="A">A</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B">B</option>
-                <option value="B-">B-</option>
-                <option value="C+">C+</option>
-                <option value="C">C</option>
-                <option value="C-">C-</option>
-                <option value="D+">D+</option>
-                <option value="D">D</option>
-                <option value="F">F</option>
-            </select>
-        </div>
-        <div>
-            <label for="comments">Comments:</label>
-            <input type="text" id="comments" name="comments">
-        </div>
-        <button type="submit">Save Grade</button>
-        <button type="button" class="clear-btn" id="clearBtn">Clear Form</button>
-    </form>
 
-    <h2>Grades List</h2>
-    <div>
-        <label for="filterStudent">Filter by Student:</label>
-        <select id="filterStudent">
-            <option value="">All Students</option>
-        </select>
-        <button id="filterBtn">Search</button>
-        <button id="showAllBtn">Show All</button>
-    </div>
+                        const token = localStorage.getItem('access_token');
+                        const userName = localStorage.getItem('name');
 
-    <table id="gradesTable">
-        <thead>
-            <tr>
-                <th>Student</th>
-                <th>Course</th>
-                <th>Term</th>
-                <th>Grade</th>
-                <th>Comments</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="gradesTbody">
-            </tbody>
-    </table>
-
-    <script>
-
-        document.addEventListener('DOMContentLoaded', () => {
-
-
-            const token = localStorage.getItem('access_token');
-            const userName = localStorage.getItem('name');
-
-            // Check the token, if it does not exist, then jump back to the login page.
-            if (!token) {
-                alert('You are not logged in. Redirecting to login page.');
-                window.location.href = '/';
-                return;
-            }
-
-
-            const gradeForm = document.getElementById('gradeForm');
-            const gradeIdInput = document.getElementById('gradeId');
-            const studentSelect = document.getElementById('studentId');
-            const courseSelect = document.getElementById('courseId');
-            const termInput = document.getElementById('term');
-            const gradeSelect = document.getElementById('grade');
-            const commentsInput = document.getElementById('comments');
-
-            const filterStudentSelect = document.getElementById('filterStudent');
-            const filterBtn = document.getElementById('filterBtn');
-            const showAllBtn = document.getElementById('showAllBtn');
-            const clearBtn = document.getElementById('clearBtn');
-            const logoutButton = document.getElementById('logoutButton');
-
-            const gradesTbody = document.getElementById('gradesTbody');
-
-
-            async function apiFetch(url, options = {}) {
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                };
-
-                const config = {
-                    ...options,
-                    headers: { ...headers, ...options.headers },
-                };
-
-                try {
-                    const response = await fetch(url, config);
-
-                    // Token maybe expired
-                    if (response.status === 401) {
-
-                        alert('Session expired. Please log in again.');
-                        logout();
-                        return;
-                    }
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || 'API request failed');
-                    }
-
-
-                    if (response.status === 204 || options.method === 'DELETE') {
-                        return { success: true };
-                    }
-
-                    return response.json();
-
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    alert(`Error: ${error.message}`);
-                    throw error;
-                }
-            }
-
-            // --- 載入初始數據 (學生/課程) ---
-
-            // 載入學生列表到下拉選單
-            async function loadStudents() {
-                try {
-                    const students = await apiFetch('/list_student'); // 呼叫 API
-                    studentSelect.innerHTML = '<option value="">Select Student</option>';
-                    filterStudentSelect.innerHTML = '<option value="">All Students</option>';
-
-                    // 假設回傳的是 [ [id, first_name, last_name], ... ]
-                    students.forEach(student => {
-                        const option = document.createElement('option');
-                        option.value = student[0]; // id
-                        option.textContent = `${student[1]} ${student[2]}`; // first_name last_name
-
-                        studentSelect.appendChild(option.cloneNode(true));
-                        filterStudentSelect.appendChild(option);
-                    });
-                } catch (error) {
-                    studentSelect.innerHTML = '<option value="">Failed to load students</option>';
-                    console.error('Failed to load students', error);
-                }
-            }
-
-            // 載入課程列表到下拉選單
-            async function loadCourses() {
-                try {
-                    const courses = await apiFetch('/list_course'); // 呼叫 API
-                    courseSelect.innerHTML = '<option value="">Select Course</option>';
-
-                    // 假設回傳的是 [ [id, course_name], ... ]
-                    courses.forEach(course => {
-                        const option = document.createElement('option');
-                        option.value = course[0]; // id
-                        option.textContent = course[1]; // course_name
-                        courseSelect.appendChild(option);
-                    });
-                } catch (error) {
-                    courseSelect.innerHTML = '<option value="">Failed to load courses</option>';
-                    console.error('Failed to load courses', error);
-                }
-            }
-
-            // --- 載入成績數據 ---
-
-            // 載入成績列表 (可選 student_id 過濾)
-            async function loadGrades(studentId = null) {
-                let url = '/list_grades';
-                if (studentId) {
-                    // 根據 server.py，使用 URL 參數
-                    url = `/list_grades?student_id=${studentId}`;
-                }
-
-                try {
-                    const grades = await apiFetch(url);
-                    renderGradesTable(grades);
-                } catch (error) {
-                    gradesTbody.innerHTML = '<tr><td colspan="6">Failed to load grades.</td></tr>';
-                    console.error('Failed to load grades', error);
-                }
-            }
-
-            // 渲染成績表格
-            function renderGradesTable(grades) {
-                gradesTbody.innerHTML = ''; // 清空表格
-                if (!grades || grades.length === 0) {
-                    gradesTbody.innerHTML = '<tr><td colspan="6">No grades found.</td></tr>';
-                    return;
-                }
-
-                // 根據 sql_method_ARO_DRO.py 中的 list_all_grades_sql()
-                // 回傳的順序是：g.id, g.student_id, s.first_name, s.last_name, c.course_name, g.term, g.grade, g.comments
-                grades.forEach(grade => {
-                    const tr = document.createElement('tr');
-
-                    const gradeId = grade[0];
-                    const studentId = grade[1];
-                    const studentName = `${grade[2]} ${grade[3]}`;
-                    const courseId = grade[4];      // ← 修正：course_id
-                    const courseName = grade[5];    // ← 修正：course_name
-                    const term = grade[6];          // ← 修正：term
-                    const gradeValue = grade[7];    // ← 修正：grade
-                    const comments = grade[8];
-
-                    tr.innerHTML = `
-                        <td>${studentName}</td>
-                        <td>${courseName}</td>
-                        <td>${term}</td>
-                        <td>${gradeValue}</td>
-                        <td>${comments}</td>
-                        <td>
-                            <button class="edit-btn"
-                                    data-id="${gradeId}"
-                                    data-student-id="${studentId}"
-                                    data-course-id="${courseId}"
-                                    data-term="${term}"
-                                    data-grade="${gradeValue}"
-                                    data-comments="${comments}">Edit</button>
-                            <button class="delete-btn" data-id="${gradeId}">Delete</button>
-                        </td>
-                    `;
-
-                    gradesTbody.appendChild(tr);
-                });
-            }
-
-            // --- 事件監聽 (Event Listeners) ---
-
-            // 登出
-            logoutButton.addEventListener('click', logout);
-
-            async function logout() {
-                try {
-
-                    await apiFetch('/logout', {
-                        method: 'POST'
-                    });
-
-                } catch (error) {
-                  // Even if the backend call fails, we still continue to clear the data on the frontend
-                    console.error('Logout API call failed, proceeding with client-side logout:', error);
-                }
-
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('role');
-                localStorage.removeItem('user_id');
-                localStorage.removeItem('name');
-
-
-                window.location.href = '/';
-            }
-
-            // 清空表單
-            clearBtn.addEventListener('click', resetForm);
-
-            // 過濾
-            filterBtn.addEventListener('click', () => {
-                const selectedStudentId = filterStudentSelect.value;
-                loadGrades(selectedStudentId);
-            });
-
-            // 顯示全部
-            showAllBtn.addEventListener('click', () => {
-                filterStudentSelect.value = '';
-                loadGrades();
-            });
-
-
-
-            gradeForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const data = {
-                    student_id: studentSelect.value,
-                    course_id: courseSelect.value,
-                    term: termInput.value,
-                    grade: gradeSelect.value,
-                    comments: commentsInput.value
-                };
-
-                try {
-                    const result = await apiFetch('/add_grades', {
-                        method: 'POST',
-                        body: JSON.stringify(data)
-                    });
-
-                    alert(`Grade ${result.action}!`);
-                    resetForm();
-                    loadGrades(filterStudentSelect.value);
-
-                } catch (error) {
-                    alert('Failed to save grade. ' + error.message);
-                }
-            });
-
-
-            // 表格點擊 (處理編輯和刪除)
-            gradesTbody.addEventListener('click', async (e) => {
-                const target = e.target;
-                const id = target.dataset.id;
-
-                if (target.classList.contains('edit-btn')) {
-                    const { studentId, courseId, term, grade, comments } = target.dataset;
-
-                    // 获取表格中显示的课程名称
-                    const courseName = target.closest('tr').children[1].textContent;
-
-                    studentSelect.value = studentId;
-                    courseSelect.value = courseId;
-                    termInput.value = term;
-                    gradeSelect.value = grade;
-                    commentsInput.value = comments;
-
-                    // 通过课程名称匹配 courseSelect
-<!--                    for (let option of courseSelect.options) {-->
-<!--                        if (option.textContent === courseName) {-->
-<!--                            courseSelect.value = option.value;-->
-<!--                            break;-->
-<!--                        }-->
-<!--                    }-->
-
-                    alert('You can modify and resubmit. Backend will automatically update if record exists.');
-                    window.scrollTo(0, 0);
-                }
-
-
-                if (target.classList.contains('delete-btn')) {
-
-                    if (confirm(`Are you sure you want to delete grade record ${id}?`)) {
-                        try {
-                            // 根據 server.py，使用 URL 參數
-                            await apiFetch(`/delete_grades?grades_id=${id}`, {
-                                method: 'DELETE'
-                            });
-                            alert('Grade deleted successfully!');
-                            loadGrades(filterStudentSelect.value); // 重新載入表格
-                        } catch (error) {
-                            alert('Failed to delete grade. ' + error.message);
+                        // check token, redirect to login if not exists
+                        if (!token) {
+                            alert('You are not logged in. Redirecting to login page.');
+                            window.location.href = '/';
+                            return;
                         }
-                    }
-                }
-            });
 
-            // 重設表單
-            function resetForm() {
-                gradeForm.reset();
-                // 重新啟用下拉選單
-                studentSelect.disabled = false;
-                courseSelect.disabled = false;
-                termInput.disabled = false;
-            }
 
-            // --- 初始化頁面 ---
-            function initializePage() {
-                if (userName) {
-                    const welcome = document.createElement('h2');
-                    welcome.textContent = `Welcome, ${userName} (ARO)`;
-                    document.body.prepend(welcome);
-                }
-                loadStudents();
-                loadCourses();
-                loadGrades(); // 初始載入所有成績
-            }
+                        const gradeForm = document.getElementById('gradeForm');
+                        const gradeIdInput = document.getElementById('gradeId');
+                        const studentSelect = document.getElementById('studentId');
+                        const courseSelect = document.getElementById('courseId');
+                        const termInput = document.getElementById('term');
+                        const gradeSelect = document.getElementById('grade');
+                        const commentsInput = document.getElementById('comments');
 
-            initializePage();
-        });
-    </script>
-</body>
-</html>
+                        const filterStudentSelect = document.getElementById('filterStudent');
+                        const filterBtn = document.getElementById('filterBtn');
+                        const showAllBtn = document.getElementById('showAllBtn');
+                        const clearBtn = document.getElementById('clearBtn');
+                        const logoutButton = document.getElementById('logoutButton');
+
+                        const gradesTbody = document.getElementById('gradesTbody');
+
+
+                        async function apiFetch(url, options = {}) {
+                            const headers = {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            };
+
+                            const config = {
+                                ...options,
+                                headers: { ...headers, ...options.headers },
+                            };
+
+                            try {
+                                const response = await fetch(url, config);
+
+                                // token maybe expired
+                                if (response.status === 401) {
+
+                                    alert('Session expired. Please log in again.');
+                                    logout();
+                                    return;
+                                }
+
+                                if (!response.ok) {
+                                    const errorData = await response.json();
+                                    throw new Error(errorData.message || 'API request failed');
+                                }
+
+
+                                if (response.status === 204 || options.method === 'DELETE') {
+                                    return { success: true };
+                                }
+
+                                return response.json();
+
+                            } catch (error) {
+                                console.error('Fetch error:', error);
+                                alert(`Error: ${error.message}`);
+                                throw error;
+                            }
+                        }
+
+                        // load students into dropdown
+                        async function loadStudents() {
+                            try {
+                                const students = await apiFetch('/list_student');
+                                studentSelect.innerHTML = '<option value="">Select Student</option>';
+                                filterStudentSelect.innerHTML = '<option value="">All Students</option>';
+
+                                // expected format: [ [id, first_name, last_name], ... ]
+                                students.forEach(student => {
+                                    const option = document.createElement('option');
+                                    option.value = student[0]; // id
+                                    option.textContent = `${student[1]} ${student[2]}`; // first_name last_name
+
+                                    studentSelect.appendChild(option.cloneNode(true));
+                                    filterStudentSelect.appendChild(option);
+                                });
+                            } catch (error) {
+                                studentSelect.innerHTML = '<option value="">Failed to load students</option>';
+                                console.error('Failed to load students', error);
+                            }
+                        }
+
+                        // load courses into dropdown
+                        async function loadCourses() {
+                            try {
+                                const courses = await apiFetch('/list_course');
+                                courseSelect.innerHTML = '<option value="">Select Course</option>';
+
+                                // expected format: [ [id, course_name], ... ]
+                                courses.forEach(course => {
+                                    const option = document.createElement('option');
+                                    option.value = course[0]; // id
+                                    option.textContent = course[1]; // course_name
+                                    courseSelect.appendChild(option);
+                                });
+                            } catch (error) {
+                                courseSelect.innerHTML = '<option value="">Failed to load courses</option>';
+                                console.error('Failed to load courses', error);
+                            }
+                        }
+
+                        // load grades list (optional student_id filter)
+                        async function loadGrades(studentId = null) {
+                            let url = '/list_grades';
+                            if (studentId) {
+                                url = `/list_grades?student_id=${studentId}`;
+                            }
+
+                            try {
+                                const grades = await apiFetch(url);
+                                renderGradesTable(grades);
+                            } catch (error) {
+                                gradesTbody.innerHTML = '<tr><td colspan="6">Failed to load grades.</td></tr>';
+                                console.error('Failed to load grades', error);
+                            }
+                        }
+
+                        // render grades table
+                        function renderGradesTable(grades) {
+                            gradesTbody.innerHTML = '';
+                            if (!grades || grades.length === 0) {
+                                gradesTbody.innerHTML = '<tr><td colspan="6">No grades found.</td></tr>';
+                                return;
+                            }
+
+                            // expected format from list_all_grades_sql():
+                            // g.id, g.student_id, s.first_name, s.last_name, c.course_name, g.term, g.grade, g.comments
+                            grades.forEach(grade => {
+                                const tr = document.createElement('tr');
+
+                                const gradeId = grade[0];
+                                const studentId = grade[1];
+                                const studentName = `${grade[2]} ${grade[3]}`;
+                                const courseId = grade[4];
+                                const courseName = grade[5];
+                                const term = grade[6];
+                                const gradeValue = grade[7];
+                                const comments = grade[8];
+
+                                tr.innerHTML = `
+                                    <td>${studentName}</td>
+                                    <td>${courseName}</td>
+                                    <td>${term}</td>
+                                    <td>${gradeValue}</td>
+                                    <td>${comments}</td>
+                                    <td>
+                                        <button class="edit-btn"
+                                                data-id="${gradeId}"
+                                                data-student-id="${studentId}"
+                                                data-course-id="${courseId}"
+                                                data-term="${term}"
+                                                data-grade="${gradeValue}"
+                                                data-comments="${comments}">Edit</button>
+                                        <button class="delete-btn" data-id="${gradeId}">Delete</button>
+                                    </td>
+                                `;
+
+                                gradesTbody.appendChild(tr);
+                            });
+                        }
+
+                        // logout
+                        logoutButton.addEventListener('click', logout);
+
+                        async function logout() {
+                            try {
+
+                                await apiFetch('/logout', {
+                                    method: 'POST'
+                                });
+
+                            } catch (error) {
+                                // even if backend call fails, proceed with client-side logout
+                                console.error('Logout API call failed, proceeding with client-side logout:', error);
+                            }
+
+                            localStorage.removeItem('access_token');
+                            localStorage.removeItem('role');
+                            localStorage.removeItem('user_id');
+                            localStorage.removeItem('name');
+
+
+                            window.location.href = '/';
+                        }
+
+                        // clear form
+                        clearBtn.addEventListener('click', resetForm);
+
+                        // filter
+                        filterBtn.addEventListener('click', () => {
+                            const selectedStudentId = filterStudentSelect.value;
+                            loadGrades(selectedStudentId);
+                        });
+
+                        // show all
+                        showAllBtn.addEventListener('click', () => {
+                            filterStudentSelect.value = '';
+                            loadGrades();
+                        });
+
+
+
+                        gradeForm.addEventListener('submit', async (e) => {
+                            e.preventDefault();
+
+                            const data = {
+                                student_id: studentSelect.value,
+                                course_id: courseSelect.value,
+                                term: termInput.value,
+                                grade: gradeSelect.value,
+                                comments: commentsInput.value
+                            };
+
+                            try {
+                                const result = await apiFetch('/add_grades', {
+                                    method: 'POST',
+                                    body: JSON.stringify(data)
+                                });
+
+                                alert(`Grade ${result.action}!`);
+                                resetForm();
+                                loadGrades(filterStudentSelect.value);
+
+                            } catch (error) {
+                                alert('Failed to save grade. ' + error.message);
+                            }
+                        });
+
+
+                        // handle edit and delete clicks
+                        gradesTbody.addEventListener('click', async (e) => {
+                            const target = e.target;
+                            const id = target.dataset.id;
+
+                            if (target.classList.contains('edit-btn')) {
+                                const { studentId, courseId, term, grade, comments } = target.dataset;
+
+                                // get course name from table
+                                const courseName = target.closest('tr').children[1].textContent;
+
+                                studentSelect.value = studentId;
+                                courseSelect.value = courseId;
+                                termInput.value = term;
+                                gradeSelect.value = grade;
+                                commentsInput.value = comments;
+
+                                alert('You can modify and resubmit. Backend will automatically update if record exists.');
+                                window.scrollTo(0, 0);
+                            }
+
+
+                            if (target.classList.contains('delete-btn')) {
+
+                                if (confirm(`Are you sure you want to delete grade record ${id}?`)) {
+                                    try {
+                                        await apiFetch(`/delete_grades?grades_id=${id}`, {
+                                            method: 'DELETE'
+                                        });
+                                        alert('Grade deleted successfully!');
+                                        loadGrades(filterStudentSelect.value);
+                                    } catch (error) {
+                                        alert('Failed to delete grade. ' + error.message);
+                                    }
+                                }
+                            }
+                        });
+
+                        // reset form
+                        function resetForm() {
+                            gradeForm.reset();
+                            // re-enable dropdowns
+                            studentSelect.disabled = false;
+                            courseSelect.disabled = false;
+                            termInput.disabled = false;
+                        }
+
+                        // initialize page
+                        function initializePage() {
+                            if (userName) {
+                                const welcome = document.createElement('h2');
+                                welcome.textContent = `Welcome, ${userName} (ARO)`;
+                                document.body.prepend(welcome);
+                            }
+                            loadStudents();
+                            loadCourses();
+                            loadGrades();
+                        }
+
+                        initializePage();
+                    });
+                </script>
+            </body>
+            </html>
