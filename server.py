@@ -86,6 +86,7 @@ def login():
     else:  # staff
         user_info = get_staff_information_by_email(email)
 
+    #print(user_info.get("first_name"), user_info.get("last_name"))
     if not user_info:
         return jsonify({'message': 'Invalid credentials'}), 401
 
@@ -235,6 +236,7 @@ def list_disciplinary():
     return jsonify(result) if result else jsonify([])
 
 @app.route("/add_disciplinary", methods=["POST"])
+@jwt_required()
 def add_disciplinary():
     # DRO Only
     
@@ -249,7 +251,7 @@ def add_disciplinary():
     existing_record_id = check_disciplinary_exists(student_id, date)
     if existing_record_id:
         # if the grade record exists, modify it instead
-        result = modify_disciplinary_sql(existing_record_id, descriptions)
+        result = modify_disciplinary_sql(existing_record_id, descriptions,staff_id)
         return jsonify({'success': result, 'action': 'modified'})
     else:
         result = add_disciplinary_sql(student_id, staff_id, date, descriptions)
@@ -257,6 +259,7 @@ def add_disciplinary():
 
 
 @app.route("/modify_disciplinary", methods=["PUT"])
+@jwt_required()
 def modify_disciplinary():
     # DRO Only
     
@@ -264,8 +267,9 @@ def modify_disciplinary():
     
     disciplinary_id = data.get('disciplinary_id')
     descriptions = data.get('descriptions')
+    staff_id = data.get('staff_id')
     
-    result = modify_disciplinary_sql(disciplinary_id, descriptions)
+    result = modify_disciplinary_sql(disciplinary_id, descriptions,staff_id)
     
     return jsonify({'success': result})
 

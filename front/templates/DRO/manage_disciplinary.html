@@ -43,12 +43,7 @@
                 <option value="">Loading students...</option>
             </select>
         </div>
-        <div>
-            <label for="staffId">Staff:</label>
-            <select id="staffId" name="staffId" required>
-                <option value="">Loading staff...</option>
-            </select>
-        </div>
+        <input type="hidden" id="staffId" name="staffId">
         <div>
             <label for="date">Date:</label>
             <input type="date" id="date" name="date" required>
@@ -90,6 +85,7 @@
 
             const token = localStorage.getItem('access_token');
             const userName = localStorage.getItem('name');
+            const currentStaffId = localStorage.getItem('user_id');
 
             if (!token) {
                 alert('You are not logged in. Redirecting to login page.');
@@ -165,22 +161,7 @@
             }
 
 
-            async function loadStaff() {
-                try {
-                    const staff = await apiFetch('/list_staff');
-                    staffSelect.innerHTML = '<option value="">Select Staff</option>';
 
-                    staff.forEach(person => {
-                        const option = document.createElement('option');
-                        option.value = person[0]; // id
-                        option.textContent = `${person[1]} ${person[2]}`; // first_name last_name
-                        staffSelect.appendChild(option);
-                    });
-                } catch (error)
- {
-                    console.error('Failed to load staff', error);
-                }
-            }
 
 
 
@@ -273,7 +254,7 @@
                 const id = disciplinaryIdInput.value;
                 const data = {
                     student_id: studentSelect.value,
-                    staff_id: staffSelect.value,
+                    staff_id: currentStaffId,
                     date: dateInput.value,
                     descriptions: descriptionsInput.value
                 };
@@ -283,6 +264,7 @@
 
                         const updateData = {
                             disciplinary_id: id,
+                            staff_id: currentStaffId,
                             descriptions: data.descriptions
                         };
                         await apiFetch('/modify_disciplinary', {
@@ -318,13 +300,13 @@
 
                     disciplinaryIdInput.value = id;
                     studentSelect.value = studentId;
-                    staffSelect.value = staffId;
+
                     dateInput.value = date.split('T')[0];
                     descriptionsInput.value = descriptions;
 
 
                     studentSelect.disabled = true;
-                    staffSelect.disabled = true;
+
                     dateInput.disabled = true;
 
                     alert('Record loaded to Add/Edit form.\n\nStudent, Staff, and Date are locked.\nOnly Descriptions can be modified.');
@@ -354,7 +336,7 @@
                 recordForm.reset();
                 disciplinaryIdInput.value = '';
                 studentSelect.disabled = false;
-                staffSelect.disabled = false;
+
                 dateInput.disabled = false;
 
                 const formTitle = document.querySelector('h2');
@@ -370,7 +352,6 @@
                     document.body.prepend(welcome);
                 }
                 loadStudents();
-                loadStaff();
                 loadRecords();
             }
 

@@ -209,14 +209,15 @@ def add_disciplinary_sql(student_id, staff_id, date, descriptions):
     conn.close()
     return result
 
-def modify_disciplinary_sql(disciplinary_id, descriptions):
+def modify_disciplinary_sql(disciplinary_id, descriptions,staff_id):
     conn = get_db_connection()
+
     sql = """
     UPDATE disciplinary_records 
-    SET descriptions = %s 
+    SET descriptions = %s, staff_id = %s
     WHERE id = %s
     """
-    result = execute_commit(conn, sql,(descriptions, disciplinary_id))
+    result = execute_commit(conn, sql,(descriptions, staff_id,disciplinary_id))
     
     conn.close()
     return result
