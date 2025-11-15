@@ -18,7 +18,7 @@ CREATE TABLE staffs (
     email VARCHAR(255) NOT NULL UNIQUE,
     phone VARCHAR(20),
     department ENUM('Computing', 'Business', 'Engineering', 'Humanities', 'Science'),
-    role ENUM('ARO', 'DRO', 'Admin', 'Faculty')
+    role ENUM('ARO', 'DRO' )
 );
 
 CREATE TABLE courses (

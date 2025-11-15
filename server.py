@@ -354,5 +354,87 @@ def list_staff():
     result = list_staff_sql()
     return jsonify(result) if result else jsonify([])
 
+
+
+@app.route("/student/my_grades", methods=["GET"])
+@jwt_required()
+@roles_required(['student'])
+def get_my_grades():
+    # Get student ID from token
+    claims = get_jwt()
+    student_id = claims.get('user_id')
+
+    if not student_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    # Call function from sql_method_student_guardian
+    result = get_student_grades_by_student_id(student_id)
+
+    return jsonify(result) if result else jsonify([])
+
+
+@app.route("/student/my_profile", methods=["GET"])
+@jwt_required()
+@roles_required(['student'])
+def get_my_profile():
+    claims = get_jwt()
+    student_id = claims.get('user_id')
+
+    if not student_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    # Call function from sql_method_student_guardian
+    profile_data = get_student_profile_by_id(student_id)
+
+    if not profile_data:
+        return jsonify({'message': 'Student profile not found'}), 404
+
+    return jsonify(profile_data)
+
+
+@app.route("/student/my_profile", methods=["PUT"])
+@jwt_required()
+@roles_required(['student'])
+def update_my_profile():
+    claims = get_jwt()
+    student_id = claims.get('user_id')
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'message': 'No data provided'}), 400
+
+    # Call function from sql_method_student_guardian
+    result = update_student_profile(student_id, data)
+
+    if result['success']:
+        return jsonify({'message': result['message']}), 200
+    else:
+        # Distinguish between conflict (duplicate email) and other errors
+        if 'already in use' in result['message']:
+            return jsonify({'message': result['message']}), 409  # 409 Conflict
+        else:
+            return jsonify({'message': result['message']}), 500  # 500 Internal Server Error
+
+
+
+@app.route("/student/my_disciplinary", methods=["GET"])
+@jwt_required()
+@roles_required(['student'])
+def get_my_disciplinary_records():
+    # Get student ID from token
+    claims = get_jwt()
+    student_id = claims.get('user_id')
+
+    if not student_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    # Call the corrected function from sql_method_student_guardian
+    result = get_student_disciplinary_records_by_student_id(student_id)
+
+    return jsonify(result) if result else jsonify([])
+
+
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
