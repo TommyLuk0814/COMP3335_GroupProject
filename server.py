@@ -22,6 +22,23 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
 
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    # When the token expires, redirect to the error page.
+    return render_template('error.html', message="Session expired. Please log in again."), 401
+
+@jwt.unauthorized_loader
+def missing_token_callback(error):
+    # When there is no token in the request (e.g., not logged in)
+    return render_template('error.html', message="Access Denied. You are not logged in."), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    # When the token is invalid (e.g., format error)
+    return render_template('error.html', message="Invalid session token. Please log in again."), 422
+
+
 def roles_required(required_roles):
 
     def decorator(fn):
@@ -51,6 +68,9 @@ def serve_login_page():
     return render_template('login.html')
 
 
+#dont set jwt require
+#as users token may expire when accessing the page
+#so need to catch the error and jump to error website
 @app.route('/<role_folder>/<page_name>')
 @jwt_required()
 def serve_protected_page(role_folder, page_name):
@@ -76,9 +96,7 @@ def serve_protected_page(role_folder, page_name):
 
     except Exception as e:
         print(e)
-        # token invalid or expired
         return render_template('error.html', message="Page not found or session expired."), 404
-
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -432,6 +450,49 @@ def get_my_disciplinary_records():
     result = get_student_disciplinary_records_by_student_id(student_id)
 
     return jsonify(result) if result else jsonify([])
+
+
+# --- Please add these two routes to server.py ---
+
+@app.route("/guardian/my_profile", methods=["GET"])
+@jwt_required()
+@roles_required(['guardian'])
+def get_guardian_profile():
+    claims = get_jwt()
+    guardian_id = claims.get('user_id')
+
+    if not guardian_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    profile_data = get_guardian_profile_by_id(guardian_id)
+
+    if not profile_data:
+        return jsonify({'message': 'Guardian profile not found'}), 404
+
+    return jsonify(profile_data)
+
+
+@app.route("/guardian/my_profile", methods=["PUT"])
+@jwt_required()
+@roles_required(['guardian'])
+def update_guardian_profile():
+    claims = get_jwt()
+    guardian_id = claims.get('user_id')
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'message': 'No data provided'}), 400
+
+    result = update_guardian_profile(guardian_id, data)
+
+    if result['success']:
+        return jsonify({'message': result['message']}), 200
+    else:
+        if 'already in use' in result['message']:
+            return jsonify({'message': result['message']}), 409  # Conflict
+        else:
+            return jsonify({'message': result['message']}), 500  # Server Error
+
 
 
 

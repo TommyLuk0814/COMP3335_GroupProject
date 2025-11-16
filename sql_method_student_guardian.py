@@ -19,6 +19,7 @@ def execute_commit(conn, query, params=None):
     except Exception as e:
         print(f"Insert error: {e}")
         conn.rollback()
+        raise e
 
 def get_student_information_by_email(email):
     conn = get_db_connection()
@@ -35,6 +36,32 @@ def get_student_information_by_email(email):
         'first_name': row[3],
         'last_name': row[4]
     }
+
+def get_guardian_information_by_email(email):
+    conn = get_db_connection()
+    sql = "SELECT id, email, password, first_name, last_name FROM guardians WHERE email = %s"
+    result = execute_query(conn, sql, (email,))
+
+    conn.close()
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            'id': row[0],
+            'email': row[1],
+            'password': row[2],
+            'first_name': row[3],
+            'last_name': row[4]
+        }
+
+
+def get_student_information_by_guardian_id(guardian_id):
+    conn = get_db_connection()
+    sql = ""
+    result = execute_query(conn, sql, guardian_id)
+
+    conn.close()
+    return result
+
 
 def get_student_grades_by_student_id(student_id):
     # Fetches all grades for a specific student, joining course name
@@ -129,7 +156,6 @@ def update_student_profile(student_id, data):
         return {'success': False, 'message': f'Update failed: {str(e)}'}
 
 
-# --- Replace the existing function in sql_method_student_guardian.py ---
 
 def get_student_disciplinary_records_by_student_id(student_id):
     # Fetches all disciplinary records for a specific student, joining staff name
@@ -147,4 +173,74 @@ def get_student_disciplinary_records_by_student_id(student_id):
     conn.close()
     return result
 
-# --------------------------------------------------------------------
+
+
+
+def get_guardian_profile_by_id(guardian_id):
+    # Fetches non-sensitive profile data for a guardian
+    conn = get_db_connection()
+    # Based on database.sql, guardians table has fewer personal columns
+    sql = """
+    SELECT id, last_name, first_name, email, phone
+    FROM guardians 
+    WHERE id = %s
+    """
+
+    result = execute_query(conn, sql, (guardian_id,))
+    conn.close()
+
+    if result and len(result) > 0:
+        row = result[0]
+        # Convert tuple to dictionary
+        profile_data = {
+            'id': row[0],
+            'last_name': row[1],
+            'first_name': row[2],
+            'email': row[3],
+            'phone': row[4]
+        }
+        return profile_data
+
+    return None
+
+
+
+
+def update_guardian_profile(guardian_id, data):
+    # Updates guardian profile with data from the form
+    conn = get_db_connection()
+    if not conn:
+        return {'success': False, 'message': 'Failed to connect to database'}
+
+    sql_parts = []
+    params = []
+
+    # Guardians can only update email and phone
+    if 'email' in data and data['email'] is not None:
+        sql_parts.append("email = %s")
+        params.append(data['email'])
+
+    if 'phone' in data and data['phone'] is not None:
+        sql_parts.append("phone = %s")
+        params.append(data['phone'])
+
+    if not sql_parts:
+        conn.close()
+        return {'success': False, 'message': 'No valid fields to update'}
+
+    params.append(guardian_id)
+    sql = f"UPDATE guardians SET {', '.join(sql_parts)} WHERE id = %s"
+
+
+    try:
+        execute_commit(conn, sql, tuple(params))
+        conn.close()
+        return {'success': True, 'message': 'Profile updated successfully'}
+    except Exception as e:
+        # If we are here, execute_commit failed (e.g., duplicate email)
+        conn.close()
+        if 'email' in str(e) and 'Duplicate entry' in str(e):
+            return {'success': False, 'message': 'Update failed: This email address is already in use.'}
+        # Return a generic error for other SQL problems
+        return {'success': False, 'message': f'Update failed: {str(e)}'}
+

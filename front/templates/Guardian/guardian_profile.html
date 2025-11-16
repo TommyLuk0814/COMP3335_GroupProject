@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Profile</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2 { color: #333; }
+        #logoutButton {
+            background-color: #d9534f;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            float: right;
+        }
+        #logoutButton:hover { background-color: #c9302c; }
+
+        form { background: #fdfdfd; border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-top: 20px; max-width: 600px; }
+        div { margin-bottom: 12px; }
+        label { display: inline-block; width: 180px; font-weight: bold; color: #555; }
+        input[type="text"], input[type="email"] {
+            padding: 5px;
+            width: 250px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input[readonly] { background-color: #f5f5f5; border: 1px solid #eee; }
+        button { padding: 5px 10px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        button:hover { background-color: #0056b3; }
+
+        /* --- Nav Bar Styles --- */
+        nav.guardian-nav {
+            background-color: #333;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        nav.guardian-nav a {
+            float: left;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 17px;
+        }
+        nav.guardian-nav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        nav.guardian-nav a.active {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="logoutButton">Logout</button>
+    <h1 id="welcomeTitle">Guardian Profile</h1>
+
+    <nav class="guardian-nav">
+        <a href="/Guardian/guardian_profile.html" class="active">My Profile</a>
+        <a href="/Guardian/view_grades.html">View Child's Grades</a>
+        <a href="/Guardian/view_disciplinary.html">View Child's Records</a>
+    </nav>
+
+    <form id="profileForm">
+        <h2>Personal Information (Read-Only)</h2>
+        <div>
+            <label for="firstName">First Name:</label>
+            <input type="text" id="firstName" name="firstName" readonly>
+        </div>
+        <div>
+            <label for="lastName">Last Name:</label>
+            <input type="text" id="lastName" name="lastName" readonly>
+        </div>
+
+        <h2>Contact Information (Editable)</h2>
+        <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div>
+            <label for="phone">Phone:</label>
+            <input type="text" id="phone" name="phone">
+        </div>
+
+        <button type="submit">Update Profile</button>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const token = localStorage.getItem('access_token');
+            const userName = localStorage.getItem('name');
+
+            if (!token) {
+                alert('You are not logged in. Redirecting to login page.');
+                window.location.href = '/';
+                return;
+            }
+
+            if (userName) {
+                const welcome = document.createElement('h2');
+                welcome.textContent = `Welcome, ${userName} (Guardian)`;
+                document.body.prepend(welcome);
+            }
+
+            const profileForm = document.getElementById('profileForm');
+            const logoutButton = document.getElementById('logoutButton');
+
+            // Form fields
+            const firstNameInput = document.getElementById('firstName');
+            const lastNameInput = document.getElementById('lastName');
+            const emailInput = document.getElementById('email');
+            const phoneInput = document.getElementById('phone');
+
+            // --- API Fetch Function ---
+            async function apiFetch(url, options = {}) {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                };
+                const config = { ...options, headers: { ...headers, ...options.headers } };
+
+                try {
+                    const response = await fetch(url, config);
+                    if (response.status === 401) {
+                        // This case is handled by the JWT error handlers in server.py
+                        // But we keep it as a fallback
+                        alert('Session expired. Please log in again.');
+                        logout();
+                        return;
+                    }
+
+                    const responseData = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(responseData.message || 'API request failed');
+                    }
+
+                    return responseData;
+
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    alert(`Error: ${error.message}`);
+                    throw error;
+                }
+            }
+
+            // --- Load Profile Data ---
+            async function loadProfile() {
+                try {
+                    // Use the new guardian API endpoint
+                    const profileData = await apiFetch('/guardian/my_profile');
+
+                    firstNameInput.value = profileData.first_name || '';
+                    lastNameInput.value = profileData.last_name || '';
+                    emailInput.value = profileData.email || '';
+                    phoneInput.value = profileData.phone || '';
+
+                } catch (error) {
+                    alert('Failed to load profile data.');
+                    console.error('Failed to load profile', error);
+                }
+            }
+
+            // --- Handle Form Submission ---
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const updateData = {
+                    email: emailInput.value,
+                    phone: phoneInput.value
+                };
+
+                try {
+                    // Use the new guardian API endpoint
+                    const result = await apiFetch('/guardian/my_profile', {
+                        method: 'PUT',
+                        body: JSON.stringify(updateData)
+                    });
+
+                    alert(result.message || 'Profile updated successfully!');
+
+                } catch (error) {
+                    alert('Failed to update profile. ' + error.message);
+                }
+            });
+
+            // --- Logout Function ---
+            logoutButton.addEventListener('click', logout);
+
+            async function logout() {
+                try {
+                    await apiFetch('/logout', { method: 'POST' });
+                } catch (error) {
+                    console.error('Logout API call failed, proceeding with client-side logout:', error);
+                }
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('role');
+                localStorage.removeItem('user_id');
+                localStorage.removeItem('name');
+                window.location.href = '/';
+            }
+
+            // --- Initialize Page ---
+            loadProfile();
+        });
+    </script>
+</body>
+</html>
