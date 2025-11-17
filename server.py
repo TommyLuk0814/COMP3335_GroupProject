@@ -475,7 +475,7 @@ def get_guardian_profile():
 @app.route("/guardian/my_profile", methods=["PUT"])
 @jwt_required()
 @roles_required(['guardian'])
-def update_guardian_profile():
+def handle_update_guardian_profile():
     claims = get_jwt()
     guardian_id = claims.get('user_id')
 

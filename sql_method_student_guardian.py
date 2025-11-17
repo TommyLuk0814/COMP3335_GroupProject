@@ -56,8 +56,9 @@ def get_guardian_information_by_email(email):
 
 def get_student_information_by_guardian_id(guardian_id):
     conn = get_db_connection()
-    sql = ""
-    result = execute_query(conn, sql, guardian_id)
+    sql = "SELECT id, first_name, last_name, guardian_relation FROM students WHERE guardian_id = %s"
+
+    result = execute_query(conn, sql, (guardian_id,))
 
     conn.close()
     return result
@@ -244,3 +245,29 @@ def update_guardian_profile(guardian_id, data):
         # Return a generic error for other SQL problems
         return {'success': False, 'message': f'Update failed: {str(e)}'}
 
+
+def is_guardian_of_student(guardian_id, student_id):
+    """
+    Checks if a given guardian_id is the guardian of a given student_id.
+    Returns True if they are, False otherwise.
+    """
+    conn = get_db_connection()
+    if not conn:
+        print("Database connection failed in is_guardian_of_student")
+        return False
+
+    sql = "SELECT id FROM students WHERE id = %s AND guardian_id = %s"
+
+    result = None
+    try:
+        # Pass params as a tuple
+        result = execute_query(conn, sql, (student_id, guardian_id))
+    except Exception as e:
+        print(f"Error checking guardian relationship: {e}")
+        return False  # Fail safe
+    finally:
+        if conn:
+            conn.close()
+
+    # If a record is found (result is not None and has length > 0), return True
+    return result and len(result) > 0
