@@ -1,4 +1,6 @@
 from db import get_db_connection
+from encryption import get_aes_key  # Added: Import the key function
+
 
 def execute_query(conn, sql, params=None):
     # for select sql
@@ -10,6 +12,7 @@ def execute_query(conn, sql, params=None):
         print(f"Query error: {e}")
         return None
 
+
 def execute_commit(conn, query, params=None):
     # for insert, update and delete sql
     try:
@@ -19,6 +22,7 @@ def execute_commit(conn, query, params=None):
     except Exception as e:
         print(f"Insert error: {e}")
         conn.rollback()
+        raise e  # Modified: Propagate the error
 
 
 def get_staff_information_by_email(email):
@@ -37,7 +41,9 @@ def get_staff_information_by_email(email):
             'last_name': row[4],
             'role': row[5]  # 'ARO', 'DRO'
         }
+    # Added: Ensure None is returned if no user is found
     return None
+
 
 # maybe dont need that
 # def get_aro_information_by_email(email):
@@ -67,9 +73,10 @@ def list_all_grades_sql():
     ORDER BY g.term DESC, s.last_name, s.first_name
     """
     result = execute_query(conn, sql)
-    
+
     conn.close()
     return result
+
 
 def list_grades_by_student_id(student_id):
     conn = get_db_connection()
@@ -83,7 +90,7 @@ def list_grades_by_student_id(student_id):
     ORDER BY g.term DESC
     """
     result = execute_query(conn, sql, (student_id,))
-    
+
     conn.close()
     return result
 
@@ -112,12 +119,11 @@ def check_disciplinary_exists(student_id, date):
     return result[0][0] if result and len(result) > 0 else None
 
 
-
 def add_grades_sql(student_id, course_id, term, grade, comments=""):
     conn = get_db_connection()
     if not conn:
         return False
-    
+
     try:
         # 1. check if exist
         check_sql = """
@@ -127,23 +133,25 @@ def add_grades_sql(student_id, course_id, term, grade, comments=""):
         with conn.cursor() as cursor:
             cursor.execute(check_sql, (student_id, course_id, term))
             existing_record = cursor.fetchone()
-            
+
             if existing_record:
-                return False  
-        
-        # 2. not exist,do:
+                return False
+
+                # 2. not exist,do:
         insert_sql = """
         INSERT INTO grades (student_id, course_id, term, grade, comments)
         VALUES (%s, %s, %s, %s, %s)
         """
-        result = execute_commit(conn, insert_sql, (student_id, course_id, term, grade, comments))
-        return result
-        
+        execute_commit(conn, insert_sql, (student_id, course_id, term, grade, comments))
+        # Modified: Return True on success
+        return True
+
     except Exception as e:
         return False
     finally:
         if conn:
             conn.close()
+
 
 def modify_grades_sql(grade_id, grade, comments):
     conn = get_db_connection()
@@ -152,104 +160,151 @@ def modify_grades_sql(grade_id, grade, comments):
     SET grade = %s, comments = %s 
     WHERE id = %s
     """
-    result = execute_commit(conn, sql,(grade, comments, grade_id))
-    
-    conn.close()
-    return result
+    try:
+        execute_commit(conn, sql, (grade, comments, grade_id))
+        # Modified: Return True on success
+        return True
+    except Exception as e:
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 
 def delete_grades_sql(grades_id):
     conn = get_db_connection()
     sql = "DELETE FROM grades WHERE id = %s"
-    result = execute_commit(conn, sql, (grades_id,))
-    
-    conn.close()
-    return result
+    try:
+        execute_commit(conn, sql, (grades_id,))
+        # Modified: Return True on success
+        return True
+    except Exception as e:
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 
 def list_all_disciplinary_sql():
     conn = get_db_connection()
+    key = get_aes_key()  # Added: Get AES key
+
+    # Modified: Use AES_DECRYPT for descriptions
     sql = """
     SELECT d.id, d.student_id, s.first_name, s.last_name, 
            d.date, st.first_name as staff_first_name, st.last_name as staff_last_name,
-           d.descriptions
+           CAST(AES_DECRYPT(d.descriptions, %s) AS CHAR) as descriptions
     FROM disciplinary_records d
     JOIN students s ON d.student_id = s.id
     JOIN staffs st ON d.staff_id = st.id
     ORDER BY d.date DESC
     """
-    result = execute_query(conn, sql)
-    
+    # Modified: Pass key to query
+    result = execute_query(conn, sql, (key,))
+
     conn.close()
     return result
 
+
 def list_disciplinary_by_student_id(student_id):
     conn = get_db_connection()
+    key = get_aes_key()  # Added: Get AES key
+
+    # Modified: Use AES_DECRYPT for descriptions
     sql = """
     SELECT d.id, d.student_id, s.first_name, s.last_name, 
            d.date, st.first_name as staff_first_name, st.last_name as staff_last_name,
-           d.descriptions
+           CAST(AES_DECRYPT(d.descriptions, %s) AS CHAR) as descriptions
     FROM disciplinary_records d
     JOIN students s ON d.student_id = s.id
     JOIN staffs st ON d.staff_id = st.id
     WHERE d.student_id = %s
     ORDER BY d.date DESC
     """
-    result = execute_query(conn, sql, (student_id,))
-    
+    # Modified: Pass key and student_id
+    result = execute_query(conn, sql, (key, student_id))
+
     conn.close()
     return result
+
 
 def add_disciplinary_sql(student_id, staff_id, date, descriptions):
     conn = get_db_connection()
+    key = get_aes_key()  # Added: Get AES key
+
+    # Modified: Use AES_ENCRYPT for descriptions
     sql = """
     INSERT INTO disciplinary_records (student_id, staff_id, date, descriptions)
-    VALUES (%s, %s, %s, %s)
+    VALUES (%s, %s, %s, AES_ENCRYPT(%s, %s))
     """
-    result = execute_commit(conn, sql,(student_id, staff_id, date, descriptions))
-    
-    conn.close()
-    return result
+    try:
+        # Modified: Pass descriptions and key
+        execute_commit(conn, sql, (student_id, staff_id, date, descriptions, key))
+        return True
+    except Exception as e:
+        return False
+    finally:
+        if conn:
+            conn.close()
 
-def modify_disciplinary_sql(disciplinary_id, descriptions,staff_id):
+
+def modify_disciplinary_sql(disciplinary_id, descriptions, staff_id):
     conn = get_db_connection()
+    key = get_aes_key()  # Added: Get AES key
 
+    # Modified: Use AES_ENCRYPT for descriptions
     sql = """
     UPDATE disciplinary_records 
-    SET descriptions = %s, staff_id = %s
+    SET descriptions = AES_ENCRYPT(%s, %s), staff_id = %s
     WHERE id = %s
     """
-    result = execute_commit(conn, sql,(descriptions, staff_id,disciplinary_id))
-    
-    conn.close()
-    return result
+    try:
+        # Modified: Pass descriptions, key, staff_id, and disciplinary_id
+        execute_commit(conn, sql, (descriptions, key, staff_id, disciplinary_id))
+        return True
+    except Exception as e:
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 
 def delete_disciplinary_sql(disciplinary_id):
     conn = get_db_connection()
     sql = "DELETE FROM disciplinary_records WHERE id = %s"
-    result = execute_commit(conn, sql, (disciplinary_id,))
-    
-    conn.close()
-    return result
+    try:
+        execute_commit(conn, sql, (disciplinary_id,))
+        # Modified: Return True on success
+        return True
+    except Exception as e:
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 
 def list_student_sql():
     conn = get_db_connection()
     sql = "SELECT id, first_name, last_name FROM students ORDER BY last_name, first_name"
     result = execute_query(conn, sql)
-    
+
     conn.close()
     return result
+
 
 def list_course_sql():
     conn = get_db_connection()
     sql = "SELECT id, course_name FROM courses ORDER BY course_name"
     result = execute_query(conn, sql)
-    
+
     conn.close()
     return result
+
 
 def list_staff_sql():
     conn = get_db_connection()
     sql = "SELECT id, first_name, last_name FROM staffs ORDER BY last_name, first_name"
     result = execute_query(conn, sql)
-    
+
     conn.close()
     return result

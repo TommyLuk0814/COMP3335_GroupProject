@@ -4,7 +4,7 @@ CREATE TABLE guardians (
     first_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    phone VARCHAR(20)
+    phone VARBINARY(128) -- private data
 );
 
 CREATE TABLE staffs (
@@ -13,10 +13,10 @@ CREATE TABLE staffs (
     last_name VARCHAR(100) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     gender ENUM('Male', 'Female', 'Other'),
-    identification_number VARCHAR(255),
-    address VARCHAR(255),
+    identification_number VARBINARY(512),  -- private data
+    address VARBINARY(512), -- private data
     email VARCHAR(255) NOT NULL UNIQUE,
-    phone VARCHAR(20),
+    phone VARBINARY(128),  -- private data
     department ENUM('Computing', 'Business', 'Engineering', 'Humanities', 'Science'),
     role ENUM('ARO', 'DRO' )
 );
@@ -31,11 +31,11 @@ CREATE TABLE students (
     last_name VARCHAR(100) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     gender ENUM('Male', 'Female', 'Other'),
-    identification_number VARCHAR(255),
-    address VARCHAR(255),
+    identification_number VARBINARY(1024),  -- private data
+    address VARBINARY(1024),     -- private data
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    phone VARCHAR(50),
+    phone VARBINARY(256),      -- private data
     enrollment_year YEAR,
     guardian_id INT,
     guardian_relation ENUM('Father', 'Mother', 'Legal Guardian'),
@@ -58,7 +58,7 @@ CREATE TABLE disciplinary_records (
     student_id INT NOT NULL,
     date DATE,
     staff_id INT NOT NULL,
-    descriptions TEXT,
+    descriptions BLOB, -- private data
     FOREIGN KEY (student_id) REFERENCES students(id),
     FOREIGN KEY (staff_id) REFERENCES staffs(id)
 );
