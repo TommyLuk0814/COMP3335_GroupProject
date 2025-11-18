@@ -493,9 +493,56 @@ def handle_update_guardian_profile():
         else:
             return jsonify({'message': result['message']}), 500  # Server Error
 
+@app.route("/guardian/child_grades", methods=["GET"])
+@jwt_required()
+@roles_required(['guardian'])
+def get_child_grades():
+
+    claims = get_jwt()
+    guardian_id = claims.get('user_id')
+
+    student_id = request.args.get('student_id')
+
+    if not student_id:
+        return jsonify({'message': 'Missing student_id parameter'}), 400
+
+    #
+    # Security Check
+    # Verify whether this guardian is indeed the guardian of this student
+    # This is to prevent the guardian from viewing the data of other students by changing the student_id in the URL
+    #
+    if not is_guardian_of_student(guardian_id, student_id):
+        return jsonify({'message': 'Access denied: You are not authorized to view these records.'}), 403
 
 
+    result = get_student_grades_by_student_id(student_id)
 
+    return jsonify(result) if result else jsonify([])
+
+
+@app.route("/guardian/child_disciplinary", methods=["GET"])
+@jwt_required()
+@roles_required(['guardian'])
+def get_child_disciplinary_records():
+
+    claims = get_jwt()
+    guardian_id = claims.get('user_id')
+
+    student_id = request.args.get('student_id')
+
+    if not student_id:
+        return jsonify({'message': 'Missing student_id parameter'}), 400
+
+
+    # Verify whether this guardian (guardian_id) is indeed the guardian of this student (student_id)
+    #This is to prevent malicious users from viewing the data of other students by changing the student_id in the URL
+    if not is_guardian_of_student(guardian_id, student_id):
+        return jsonify({'message': 'Access denied: You are not authorized to view these records.'}), 403
+
+
+    result = get_student_disciplinary_records_by_student_id(student_id)
+
+    return jsonify(result) if result else jsonify([])
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

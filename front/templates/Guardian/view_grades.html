@@ -198,7 +198,7 @@
                 }
             }
 
-            // --- Render Grades Table (Copied from student/view_grades.html) ---
+
             function renderGradesTable(grades) {
                 gradesTbody.innerHTML = '';
                 if (!grades || grades.length === 0) {
@@ -206,10 +206,12 @@
                     return;
                 }
 
-                // [0] g.id, [1] g.student_id, [2] s.first_name, [3] s.last_name,
-                // [4] g.course_id, [5] c.course_name, [6] g.term, [7] g.grade, [8] g.comments
+
+                // [5] c.course_name, [6] g.term, [7] g.grade, [8] g.comments
                 grades.forEach(grade => {
                     const tr = document.createElement('tr');
+
+
                     tr.innerHTML = `
                         <td>${grade[5]}</td> <td>${grade[6]}</td> <td>${grade[7]}</td> <td>${grade[8] || ''}</td> `;
                     gradesTbody.appendChild(tr);
