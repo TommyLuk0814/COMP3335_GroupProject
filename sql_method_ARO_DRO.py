@@ -1,5 +1,7 @@
+
+import logging
 from db import get_db_connection
-from encryption import get_aes_key  # Added: Import the key function
+from encryption import get_aes_key
 
 
 def execute_query(conn, sql, params=None):
@@ -9,7 +11,15 @@ def execute_query(conn, sql, params=None):
             cursor.execute(sql, params)
             return cursor.fetchall()
     except Exception as e:
-        print(f"Query error: {e}")
+        # --- Modified: Replaced print with logging.error ---
+        # This will log any database query error, which could indicate
+        # a failed SQL injection attempt or other DB problem.
+        # exc_info=True logs the full error stack trace.
+        logging.error(
+            f"[DB ERROR - QUERY] Failed to execute query. SQL: {sql}, Params: {params}, Error: {e}",
+            exc_info=True
+        )
+        # --- End Modification ---
         return None
 
 
@@ -20,9 +30,14 @@ def execute_commit(conn, query, params=None):
             cursor.execute(query, params)
             conn.commit()
     except Exception as e:
-        print(f"Insert error: {e}")
+        # --- Modified: Replaced print with logging.error ---
+        # This logs any database commit error (INSERT, UPDATE, DELETE).
+        logging.error(
+            f"[DB ERROR - COMMIT] Failed to execute commit. SQL: {query}, Params: {params}, Error: {e}",
+            exc_info=True
+        )
         conn.rollback()
-        raise e  # Modified: Propagate the error
+        raise e
 
 
 def get_staff_information_by_email(email):

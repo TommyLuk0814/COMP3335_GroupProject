@@ -1,4 +1,5 @@
 import os
+import logging
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from controller import *
@@ -12,6 +13,11 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from functools import wraps
 
+logging.basicConfig(
+    filename='app.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = Flask(__name__, template_folder='front/templates')
 
@@ -47,8 +53,17 @@ def roles_required(required_roles):
             # Ensure that the JWT exists first.
             claims = get_jwt()
             user_role = claims.get('role')
+            user_identity = get_jwt_identity()
 
             if user_role not in required_roles:
+
+                # make a log if there is a policy violation
+                logging.warning(
+                    f"[POLICY VIOLATION] User: {user_identity} (Role: {user_role}) "
+                    f"attempted to access {fn.__name__} which requires roles: {required_roles}"
+                )
+
+
                 return jsonify({'message': f'Access denied: Role "{user_role}" is not authorized.'}), 403
 
             # If the role is a match, then execute the original routing function.
@@ -215,30 +230,8 @@ def list_grades():
         result = list_all_grades_sql()
     
     return jsonify(result) if result else jsonify([])
-    
 
-@app.route("/add_grades", methods=["POST"])
-@jwt_required()
-@roles_required(['ARO'])
-def add_grades():
-    # ARO Only
-    
-    data = request.get_json()
-    
-    student_id = data.get('student_id')
-    course_id = data.get('course_id')
-    term = data.get('term')
-    grade = data.get('grade')
-    comments = data.get('comments', '')
 
-    existing_grade_id = check_grade_exists(student_id, course_id, term)
-    if existing_grade_id:
-        # if the grade record exists, modify it instead
-        result = modify_grades_sql(existing_grade_id, grade, comments)
-        return jsonify({'success': result, 'action': 'modified'})
-    else:
-        result = add_grades_sql(student_id, course_id, term, grade, comments)
-        return jsonify({'success': result, 'action': 'added'})
     
 
 @app.route("/modify_grades", methods=["PUT"])
@@ -256,20 +249,71 @@ def modify_grades():
     result = modify_grades_sql(grade_id, grade, comments)
     
     return jsonify({'success': result})
-    
+
+
+@app.route("/add_grades", methods=["POST"])
+@jwt_required()
+@roles_required(['ARO'])
+def add_grades():
+    # ARO Only
+
+    data = request.get_json()
+    user_identity = get_jwt_identity()  # Added: Get current user's email for logging
+
+    student_id = data.get('student_id')
+    course_id = data.get('course_id')
+    term = data.get('term')
+    grade = data.get('grade')
+    comments = data.get('comments', '')
+
+    existing_grade_id = check_grade_exists(student_id, course_id, term)
+
+    try:
+        if existing_grade_id:
+            # if the grade record exists, modify it instead
+            result = modify_grades_sql(existing_grade_id, grade, comments)
+            action = 'modified'
+        else:
+            result = add_grades_sql(student_id, course_id, term, grade, comments)
+            action = 'added'
+
+        if result:
+            # --- Added: Logging for Data Modification ---
+            # This logs any successful change to the data, fulfilling the requirement.
+            logging.info(
+                f"[DATA MODIFICATION] User: {user_identity} successfully {action} grade. "
+                f"Student ID: {student_id}, Course ID: {course_id}, Term: {term}, Grade: {grade}"
+            )
+
+
+        return jsonify({'success': result, 'action': action})
+
+    except Exception as e:
+
+        logging.error(f"[ERROR] User: {user_identity} failed to {action} grade. Error: {str(e)}", exc_info=True)
+        return jsonify({'message': f'Failed to save grade: {str(e)}'}), 500
+
 
 @app.route("/delete_grades", methods=["DELETE"])
 @jwt_required()
 @roles_required(['ARO'])
 def delete_grades():
     # ARO Only
-    
+
     grades_id = request.args.get('grades_id')
-    
+    user_identity = get_jwt_identity()  # Added: Get current user's email for logging
+
     result = delete_grades_sql(grades_id)
-    
+
+    if result:
+        # --- Added: Logging for Data Modification ---
+        logging.info(
+            f"[DATA MODIFICATION] User: {user_identity} successfully deleted grade. "
+            f"Grade ID: {grades_id}"
+        )
+        # --- End Logging ---
+
     return jsonify({'success': result})
-    
 
 @app.route("/list_disciplinary", methods=["GET"])
 @jwt_required()
