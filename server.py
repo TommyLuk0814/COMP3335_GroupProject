@@ -303,17 +303,24 @@ def delete_grades():
     grades_id = request.args.get('grades_id')
     user_identity = get_jwt_identity()  # Added: Get current user's email for logging
 
-    result = delete_grades_sql(grades_id)
+    try:
+        result = delete_grades_sql(grades_id)
 
-    if result:
-        # --- Added: Logging for Data Modification ---
-        logging.info(
-            f"[DATA MODIFICATION] User: {user_identity} successfully deleted grade. "
-            f"Grade ID: {grades_id}"
-        )
-        # --- End Logging ---
+        if result:
+            logging.info(
+                f"[DATA MODIFICATION] User: {user_identity} successfully deleted grade. "
+                f"Grade ID: {grades_id}"
+            )
 
-    return jsonify({'success': result})
+
+        return jsonify({'success': result})
+
+    except Exception as e:
+
+        logging.error(f"[ERROR] User: {user_identity} failed to delete grade ID {grades_id}. Error: {str(e)}",
+                      exc_info=True)
+        return jsonify({'message': f'Failed to delete grade: {str(e)}'}), 500
+
 
 @app.route("/list_disciplinary", methods=["GET"])
 @jwt_required()
@@ -330,28 +337,45 @@ def list_disciplinary():
     
     return jsonify(result) if result else jsonify([])
 
+
 @app.route("/add_disciplinary", methods=["POST"])
 @jwt_required()
 @roles_required(['DRO'])
 def add_disciplinary():
     # DRO Only
-    
+
     data = request.get_json()
-    
+    user_identity = get_jwt_identity()  # Added: Get current user's email for logging
+
     student_id = data.get('student_id')
     staff_id = data.get('staff_id')
     date = data.get('date')
     descriptions = data.get('descriptions')
 
+    action = 'add/modify'  # Default action text
+    try:
+        existing_record_id = check_disciplinary_exists(student_id, date)
+        if existing_record_id:
+            # if the grade record exists, modify it instead
+            result = modify_disciplinary_sql(existing_record_id, descriptions, staff_id)
+            action = 'modified'
+        else:
+            result = add_disciplinary_sql(student_id, staff_id, date, descriptions)
+            action = 'added'
 
-    existing_record_id = check_disciplinary_exists(student_id, date)
-    if existing_record_id:
-        # if the grade record exists, modify it instead
-        result = modify_disciplinary_sql(existing_record_id, descriptions,staff_id)
-        return jsonify({'success': result, 'action': 'modified'})
-    else:
-        result = add_disciplinary_sql(student_id, staff_id, date, descriptions)
-        return jsonify({'success': result, 'action': 'added'})
+        if result:
+            logging.info(
+                f"[DATA MODIFICATION] User: {user_identity} (Staff ID: {staff_id}) successfully {action} disciplinary record. "
+                f"Student ID: {student_id}, Date: {date}"
+            )
+
+
+        return jsonify({'success': result, 'action': action})
+
+    except Exception as e:
+        logging.error(f"[ERROR] User: {user_identity} failed to {action} disciplinary record. Error: {str(e)}",
+                      exc_info=True)
+        return jsonify({'message': f'Failed to save record: {str(e)}'}), 500
 
 
 @app.route("/modify_disciplinary", methods=["PUT"])
@@ -359,27 +383,58 @@ def add_disciplinary():
 @roles_required(['DRO'])
 def modify_disciplinary():
     # DRO Only
-    
+
     data = request.get_json()
-    
+    user_identity = get_jwt_identity()  # Added: Get current user's email for logging
+
     disciplinary_id = data.get('disciplinary_id')
     descriptions = data.get('descriptions')
     staff_id = data.get('staff_id')
-    
-    result = modify_disciplinary_sql(disciplinary_id, descriptions,staff_id)
-    
-    return jsonify({'success': result})
+
+    try:
+        result = modify_disciplinary_sql(disciplinary_id, descriptions, staff_id)
+
+        if result:
+            logging.info(
+                f"[DATA MODIFICATION] User: {user_identity} (Staff ID: {staff_id}) successfully modified disciplinary record. "
+                f"Record ID: {disciplinary_id}"
+            )
+
+        return jsonify({'success': result})
+
+    except Exception as e:
+        logging.error(
+            f"[ERROR] User: {user_identity} failed to modify disciplinary record ID {disciplinary_id}. Error: {str(e)}",
+            exc_info=True)
+        return jsonify({'message': f'Failed to modify record: {str(e)}'}), 500
+
 
 @app.route("/delete_disciplinary", methods=["DELETE"])
 @jwt_required()
 @roles_required(['DRO'])
 def delete_disciplinary():
     # DRO Only
-    
+
     disciplinary_id = request.args.get('disciplinary_id')
-    
-    result = delete_disciplinary_sql(disciplinary_id)
-    return jsonify({'success': result})
+    user_identity = get_jwt_identity()
+
+    try:
+        result = delete_disciplinary_sql(disciplinary_id)
+
+        if result:
+            logging.info(
+                f"[DATA MODIFICATION] User: {user_identity} successfully deleted disciplinary record. "
+                f"Record ID: {disciplinary_id}"
+            )
+
+        return jsonify({'success': result})
+
+    except Exception as e:
+        logging.error(
+            f"[ERROR] User: {user_identity} failed to delete disciplinary record ID {disciplinary_id}. Error: {str(e)}",
+            exc_info=True)
+        return jsonify({'message': f'Failed to delete record: {str(e)}'}), 500
+
 
 @app.route("/guardian_children", methods=["GET"])
 @jwt_required()
@@ -460,17 +515,29 @@ def get_my_profile():
 def update_my_profile():
     claims = get_jwt()
     student_id = claims.get('user_id')
+    user_identity = get_jwt_identity()
 
     data = request.get_json()
     if not data:
         return jsonify({'message': 'No data provided'}), 400
 
+    logging.info(
+        f"[DATA MODIFICATION ATTEMPT] User: {user_identity} (Student ID: {student_id}) is attempting to update profile.")
+
     # Call function from sql_method_student_guardian
     result = update_student_profile(student_id, data)
 
     if result['success']:
+        logging.info(
+            f"[DATA MODIFICATION] User: {user_identity} (Student ID: {student_id}) successfully updated their profile."
+        )
         return jsonify({'message': result['message']}), 200
     else:
+        logging.warning(
+            f"[DATA MODIFICATION FAILED] User: {user_identity} (Student ID: {student_id}) failed to update profile. "
+            f"Reason: {result['message']}"
+        )
+
         # Distinguish between conflict (duplicate email) and other errors
         if 'already in use' in result['message']:
             return jsonify({'message': result['message']}), 409  # 409 Conflict
@@ -496,7 +563,6 @@ def get_my_disciplinary_records():
     return jsonify(result) if result else jsonify([])
 
 
-# --- Please add these two routes to server.py ---
 
 @app.route("/guardian/my_profile", methods=["GET"])
 @jwt_required()
@@ -522,20 +588,34 @@ def get_guardian_profile():
 def handle_update_guardian_profile():
     claims = get_jwt()
     guardian_id = claims.get('user_id')
+    user_identity = get_jwt_identity()
 
     data = request.get_json()
     if not data:
         return jsonify({'message': 'No data provided'}), 400
 
+    logging.info(
+        f"[DATA MODIFICATION ATTEMPT] User: {user_identity} (Guardian ID: {guardian_id}) is attempting to update profile.")
+
     result = update_guardian_profile(guardian_id, data)
 
     if result['success']:
+        logging.info(
+            f"[DATA MODIFICATION] User: {user_identity} (Guardian ID: {guardian_id}) successfully updated their profile."
+        )
         return jsonify({'message': result['message']}), 200
     else:
+        logging.warning(
+            f"[DATA MODIFICATION FAILED] User: {user_identity} (Guardian ID: {guardian_id}) failed to update profile. "
+            f"Reason: {result['message']}"
+        )
+
         if 'already in use' in result['message']:
             return jsonify({'message': result['message']}), 409  # Conflict
         else:
             return jsonify({'message': result['message']}), 500  # Server Error
+
+
 
 @app.route("/guardian/child_grades", methods=["GET"])
 @jwt_required()
