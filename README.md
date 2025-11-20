@@ -31,6 +31,21 @@ To run this application on a clean Windows 11 environment, install:
 Note: Ensure `database.sql` contains both `CREATE TABLE` statements and initial `INSERT` data.
 
 ## Step 2: Percona Docker Setup
+Edit `docker-compose.yml` and update the `MYSQL_ROOT_PASSWORD:` to match your password. Example:
+```yaml
+# docker-compose.yml (example snippet)
+db:
+   image: percona:8.0
+   container_name: percona-server
+   restart: always
+   environment:
+      MYSQL_ROOT_PASSWORD: root  # Change the password
+      MYSQL_DATABASE: ComputingU
+   ports:
+      - "3306:3306"
+   volumes:
+      - db_data:/var/lib/mysql
+```
 Open Command Prompt or PowerShell.
 ``` powershell
 # navigate to the my-percona directory (where `my-percona\docker-compose` is located)
