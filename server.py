@@ -103,7 +103,7 @@ def serve_protected_page(role_folder, page_name):
         # Check if the logged-in user's role corresponds to the folder they want to access.
         if role_to_folder_map.get(user_role) == role_folder:
             # correct role
-            path = os.path.join(role_folder, page_name)
+            path = os.path.join(role_folder, page_name).replace('\\', '/')
             return render_template(path)
         else:
             return render_template('error.html', message="Access Denied. Invalid role."), 403
