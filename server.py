@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from controller import *
@@ -28,6 +29,23 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
 
+#for verity grades
+VALID_GRADES = {'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'}
+TERM_REGEX = re.compile(r'^\d{6}S\d$')
+
+def validate_grade_input(grade, term=None, comments=None):
+    if grade not in VALID_GRADES:
+        return False, f"Invalid grade value. Allowed values: {', '.join(VALID_GRADES)}"
+
+    # Verify semester format (if provided)
+    if term and not TERM_REGEX.match(term):
+        return False, "Invalid term format. It should be alphanumeric and 4-10 characters long."
+
+    # Verify comment length (to prevent long string attacks or abuse)
+    if comments and len(comments) > 255:  # 設定一個合理的上限，例如 500 字
+        return False, "Comments are too long (max 255 characters)."
+
+    return True, ""
 
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
@@ -104,7 +122,7 @@ def serve_protected_page(role_folder, page_name):
         # Check if the logged-in user's role corresponds to the folder they want to access.
         if role_to_folder_map.get(user_role) == role_folder:
             # correct role
-            path = os.path.join(role_folder, page_name)
+            path = os.path.join(role_folder, page_name).replace('\\', '/')
             return render_template(path)
         else:
             return render_template('error.html', message="Access Denied. Invalid role."), 403
@@ -241,14 +259,43 @@ def modify_grades():
     # ARO Only
     
     data = request.get_json()
+    user_identity = get_jwt_identity()
     
     grade_id = data.get('grade_id')
     grade = data.get('grade')
     comments = data.get('comments', '')
-    
-    result = modify_grades_sql(grade_id, grade, comments)
-    
-    return jsonify({'success': result})
+
+    if not grade_id or not grade:
+        return jsonify({'message': 'Missing required fields (grade_id, grade).'}), 400
+
+        # Verification ID is an integer.
+    try:
+        grade_id = int(grade_id)
+    except ValueError:
+        return jsonify({'message': 'Grade ID must be an integer.'}), 400
+
+        # Verify the length of the score value and the comment length
+        # here, there is no need to verify the term, as modify only changes to score and comment.
+    is_valid, error_msg = validate_grade_input(grade, comments=comments)
+    if not is_valid:
+        return jsonify({'message': error_msg}), 400
+
+
+    try:
+        result = modify_grades_sql(grade_id, grade, comments)
+
+        if result:
+            logging.info(
+                f"[DATA MODIFICATION] User: {user_identity} successfully modified grade ID: {grade_id} to Grade: {grade}"
+            )
+            return jsonify({'success': result})
+        else:
+            return jsonify({'message': 'Failed to modify grade. Record may not exist.'}), 404
+
+    except Exception as e:
+        logging.error(f"[ERROR] User: {user_identity} failed to modify grade ID {grade_id}. Error: {str(e)}",
+                      exc_info=True)
+        return jsonify({'message': f'Failed to modify grade: {str(e)}'}), 500
 
 
 @app.route("/add_grades", methods=["POST"])
@@ -265,6 +312,22 @@ def add_grades():
     term = data.get('term')
     grade = data.get('grade')
     comments = data.get('comments', '')
+
+    #Input Validation
+    if not all([student_id, course_id, term, grade]):
+        return jsonify({'message': 'Missing required fields (student_id, course_id, term, grade).'}), 400
+
+        # Verify if the ID is an integer (to prevent strings or other types)
+    try:
+        student_id = int(student_id)
+        course_id = int(course_id)
+    except ValueError:
+        return jsonify({'message': 'Student ID and Course ID must be integers.'}), 400
+
+        # Verify score values, semester format, comment length
+    is_valid, error_msg = validate_grade_input(grade, term, comments)
+    if not is_valid:
+        return jsonify({'message': error_msg}), 400
 
     existing_grade_id = check_grade_exists(student_id, course_id, term)
 
