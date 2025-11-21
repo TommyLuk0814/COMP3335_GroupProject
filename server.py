@@ -1,6 +1,7 @@
 import os
 import logging
 import re
+from datetime import datetime
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from sql_method_student_guardian import *
@@ -28,9 +29,11 @@ app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
 
-#for verity grades
+#for verity input
 VALID_GRADES = {'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'}
 TERM_REGEX = re.compile(r'^\d{6}S\d$')
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+PHONE_REGEX = re.compile(r'^\+?[0-9\s-]{8,20}$')
 
 def validate_grade_input(grade, term=None, comments=None):
     if grade not in VALID_GRADES:
@@ -46,6 +49,47 @@ def validate_grade_input(grade, term=None, comments=None):
 
     return True, ""
 
+def validate_disciplinary_input(date_str=None, descriptions=None):
+    #Verify date format (YYYY-MM-DD)
+    if date_str:
+        try:
+            # strptime will check if the date is valid (for example, it will not have 2025-02-30).
+            datetime.strptime(date_str, '%Y-%m-%d')
+        except ValueError:
+            return False, "Invalid date format. Please use YYYY-MM-DD."
+
+    # Verification Description Length
+
+    #Since descriptions are encrypted before being stored in BLOB, the plaintext length is limited here.
+    if descriptions:
+        if len(descriptions) > 2000:  # 設定上限，例如 2000 字
+            return False, "Descriptions are too long (max 2000 characters)."
+        if len(descriptions.strip()) == 0:
+            return False, "Descriptions cannot be empty."
+
+    return True, ""
+
+def validate_profile_update(email=None, phone=None, address=None):
+
+    # Verify Email
+    if email:
+        if len(email) > 255: # 資料庫 varchar(255)
+            return False, "Email is too long."
+        if not EMAIL_REGEX.match(email):
+            return False, "Invalid email format."
+
+    if phone:
+        #The phone field in the database is an encrypted field, but plain text input should not be too long or contain strange characters.
+        if not PHONE_REGEX.match(phone):
+            return False, "Invalid phone format. Allowed characters: digits, space, -, +"
+
+    # Verification Address (only for students)
+    if address:
+        # Limit the length of addresses to prevent maliciously long strings from consuming encryption resources.
+        if len(address) > 200:
+            return False, "Address is too long (max 200 characters)."
+
+    return True, ""
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
     # When the token expires, redirect to the error page.
@@ -405,20 +449,38 @@ def list_disciplinary():
 @roles_required(['DRO'])
 def add_disciplinary():
     # DRO Only
-
     data = request.get_json()
-    user_identity = get_jwt_identity()  # Added: Get current user's email for logging
+    user_identity = get_jwt_identity()  # 用於日誌記錄
 
+    # 1. 提取參數
     student_id = data.get('student_id')
     staff_id = data.get('staff_id')
     date = data.get('date')
     descriptions = data.get('descriptions')
 
+    #  Input Validation
+    # Check Required Fields
+    if not all([student_id, staff_id, date, descriptions]):
+        return jsonify({'message': 'Missing required fields (student_id, staff_id, date, descriptions).'}), 400
+
+    try:
+        student_id = int(student_id)
+        staff_id = int(staff_id)
+    except ValueError:
+        return jsonify({'message': 'Student ID and Staff ID must be integers.'}), 400
+
+    # Verification date and description content
+    is_valid, error_msg = validate_disciplinary_input(date, descriptions)
+    if not is_valid:
+        return jsonify({'message': error_msg}), 400
+
     action = 'add/modify'  # Default action text
     try:
+        # Check if there is already a record for the student on the same day.
         existing_record_id = check_disciplinary_exists(student_id, date)
+
         if existing_record_id:
-            # if the grade record exists, modify it instead
+            # If the record exists, change it to modify.
             result = modify_disciplinary_sql(existing_record_id, descriptions, staff_id)
             action = 'modified'
         else:
@@ -430,9 +492,11 @@ def add_disciplinary():
                 f"[DATA MODIFICATION] User: {user_identity} (Staff ID: {staff_id}) successfully {action} disciplinary record. "
                 f"Student ID: {student_id}, Date: {date}"
             )
-
-
-        return jsonify({'success': result, 'action': action})
+            return jsonify({'success': result, 'action': action})
+        else:
+            # SQL failed (e.g., foreign key constraint fails)
+            logging.warning(f"[DATA ERROR] User: {user_identity} failed to {action} disciplinary record. Data: {data}")
+            return jsonify({'message': 'Operation failed. Please check if Student ID exists.'}), 400
 
     except Exception as e:
         logging.error(f"[ERROR] User: {user_identity} failed to {action} disciplinary record. Error: {str(e)}",
@@ -445,13 +509,29 @@ def add_disciplinary():
 @roles_required(['DRO'])
 def modify_disciplinary():
     # DRO Only
-
     data = request.get_json()
-    user_identity = get_jwt_identity()  # Added: Get current user's email for logging
+    user_identity = get_jwt_identity()
 
     disciplinary_id = data.get('disciplinary_id')
     descriptions = data.get('descriptions')
     staff_id = data.get('staff_id')
+
+    # Input Validation
+    # # Check Required Fields
+    if not all([disciplinary_id, staff_id, descriptions]):
+        return jsonify({'message': 'Missing required fields (disciplinary_id, staff_id, descriptions).'}), 400
+
+    # Verification ID Type
+    try:
+        disciplinary_id = int(disciplinary_id)
+        staff_id = int(staff_id)
+    except ValueError:
+        return jsonify({'message': 'Disciplinary Record ID and Staff ID must be integers.'}), 400
+
+    # Verification description content
+    is_valid, error_msg = validate_disciplinary_input(descriptions=descriptions)
+    if not is_valid:
+        return jsonify({'message': error_msg}), 400
 
     try:
         result = modify_disciplinary_sql(disciplinary_id, descriptions, staff_id)
@@ -461,14 +541,16 @@ def modify_disciplinary():
                 f"[DATA MODIFICATION] User: {user_identity} (Staff ID: {staff_id}) successfully modified disciplinary record. "
                 f"Record ID: {disciplinary_id}"
             )
-
-        return jsonify({'success': result})
+            return jsonify({'success': result})
+        else:
+            return jsonify({'message': 'Failed to modify record. Record may not exist.'}), 404
 
     except Exception as e:
         logging.error(
             f"[ERROR] User: {user_identity} failed to modify disciplinary record ID {disciplinary_id}. Error: {str(e)}",
             exc_info=True)
         return jsonify({'message': f'Failed to modify record: {str(e)}'}), 500
+
 
 
 @app.route("/delete_disciplinary", methods=["DELETE"])
@@ -583,10 +665,22 @@ def update_my_profile():
     if not data:
         return jsonify({'message': 'No data provided'}), 400
 
+    email = data.get('email')
+    phone = data.get('phone')
+    address = data.get('address')
+
+    # At least one field to be modified must be provided.
+    if not any([email, phone, address]):
+        return jsonify({'message': 'No valid fields provided for update.'}), 400
+
+    is_valid, error_msg = validate_profile_update(email, phone, address)
+    if not is_valid:
+        logging.warning(f"[VALIDATION ERROR] User: {user_identity} failed validation: {error_msg}")
+        return jsonify({'message': error_msg}), 400
+
     logging.info(
         f"[DATA MODIFICATION ATTEMPT] User: {user_identity} (Student ID: {student_id}) is attempting to update profile.")
 
-    # Call function from sql_method_student_guardian
     result = update_student_profile(student_id, data)
 
     if result['success']:
@@ -600,12 +694,10 @@ def update_my_profile():
             f"Reason: {result['message']}"
         )
 
-        # Distinguish between conflict (duplicate email) and other errors
         if 'already in use' in result['message']:
-            return jsonify({'message': result['message']}), 409  # 409 Conflict
+            return jsonify({'message': result['message']}), 409
         else:
-            return jsonify({'message': result['message']}), 500  # 500 Internal Server Error
-
+            return jsonify({'message': result['message']}), 500
 
 
 @app.route("/student/my_disciplinary", methods=["GET"])
@@ -655,6 +747,17 @@ def handle_update_guardian_profile():
     data = request.get_json()
     if not data:
         return jsonify({'message': 'No data provided'}), 400
+
+    email = data.get('email')
+    phone = data.get('phone')
+
+    if not any([email, phone]):
+        return jsonify({'message': 'No valid fields provided for update.'}), 400
+
+    is_valid, error_msg = validate_profile_update(email, phone, address=None)
+    if not is_valid:
+        logging.warning(f"[VALIDATION ERROR] User: {user_identity} failed validation: {error_msg}")
+        return jsonify({'message': error_msg}), 400
 
     logging.info(
         f"[DATA MODIFICATION ATTEMPT] User: {user_identity} (Guardian ID: {guardian_id}) is attempting to update profile.")
