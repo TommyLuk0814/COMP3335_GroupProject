@@ -1,9 +1,9 @@
 import mysql.connector
 
 DB_CONFIG = {
-    "host": "210.6.24.3",
+    "host": "localhost",
     "user": "root",
-    "password": "polyu",
+    "password": "123456789",
     "database": "ComputingU",
     "port": 3306
 }

@@ -6,7 +6,7 @@ services:
     container_name: percona-server
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root  # Change the password
+      MYSQL_ROOT_PASSWORD: 123456789  # Change the password
       MYSQL_DATABASE: ComputingU
     ports:
       - "3306:3306"
