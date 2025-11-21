@@ -78,7 +78,7 @@ Edit `db.py` and update the `DB_CONFIG` dictionary to match your local MySQL set
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "YOUR_PASSWORD", # Update your password
+    "password": "123456789", # Update your password
     "database": "ComputingU",
     "port": 3306
 }
