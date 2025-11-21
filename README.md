@@ -5,38 +5,61 @@ This project implements a secure database application for a university context (
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Step 1: Database Installation & Setup](#step-1-database-installation--setup)
-- [Step 2: Application Setup](#step-2-application-setup)
-- [Step 3: Configuration](#step-3-configuration)
-- [Step 4: Running the Application](#step-4-running-the-application)
+- [Step 2: Percona Docker Setup](#step-2-percona-docker-setup)
+- [Step 3: Application Setup](#step-3-application-setup)
+- [Step 4: Configuration](#step-4-configuration)
+- [Step 5: Running the Application](#step-5-running-the-application)
 - [Usage & Demo Accounts](#usage--demo-accounts)
 - [Project Structure](#project-structure)
 
 ## Prerequisites
 To run this application on a clean Windows 11 environment, install:
-- Python 3.8 or higher — download from the official Python website. During installation, check "Add Python to PATH".
-- MySQL Community Server — choose "Windows (x86, 64-bit), MSI Installer" and install. (Any suspicious external links were removed.)
+- Python 3.8 or higher — download from the official Python website. During installation, check "Add Python to PATH". https://www.python.org/downloads/
+- MySQL Community Server — choose "Windows (x86, 64-bit), MSI Installer" and install. (Any suspicious external links were removed.) https://dev.mysql.com/downloads/mysql/
+- Docker https://docs.docker.com/desktop/setup/install/windows-install/
+- DBeaver https://dbeaver.io/download/
 
 ## Step 1: Database Installation & Setup
 1. Install MySQL Server and complete the setup. When prompted, set a strong root password (e.g., `Password123!`) and remember it.
-2. Create the application database and import the provided SQL:
-
-Open MySQL CLI or Workbench and run:
-```sql
--- Create the database
-CREATE DATABASE ComputingU;
-
--- Use the database
-USE ComputingU;
-
--- Import SQL file (example path)
-SOURCE C:/path/to/your/project/code/database.sql;
-```
+2. Open DBeaver.
+3. Click New Database Connection (Ctrl + Shift + N).
+4. Select MySQL and click next.
+5. Enter Server Host: localhost, Port: 3306, Username: root, Password: [your password] and click finish.
+6. Right click Databases under localhost and select create new database, input ComputingU as database name and click ok.
+7. Right click ComputingU, select Tools and Restore database.
+8. Select database.sql as input file and click start.
 Note: Ensure `database.sql` contains both `CREATE TABLE` statements and initial `INSERT` data.
 
-## Step 2: Application Setup
-Open Command Prompt or PowerShell, navigate to the project directory (where `server.py` is located):
+## Step 2: Percona Docker Setup
+Edit `docker-compose.yml` and update the `MYSQL_ROOT_PASSWORD:` to match your password. Example:
+```yaml
+# docker-compose.yml (example snippet)
+db:
+   image: percona:8.0
+   container_name: percona-server
+   restart: always
+   environment:
+      MYSQL_ROOT_PASSWORD: root  # Change the password
+      MYSQL_DATABASE: ComputingU
+   ports:
+      - "3306:3306"
+   volumes:
+      - db_data:/var/lib/mysql
+```
+Open Command Prompt or PowerShell.
+``` powershell
+# navigate to the my-percona directory (where `my-percona\docker-compose` is located)
+cd [your_path]\COMP3335_GroupProject\my-percona
+# compose and start percona server
+docker-compose up -d
+docker exec -it percona-server mysql -uroot -p
+```
+
+## Step 3: Application Setup
+Open Command Prompt or PowerShell.
 ```powershell
-cd path\to\your\project\code
+# navigate to the project directory (where `server.py` is located):
+cd [your_path]\COMP3335_GroupProject
 ```
 (Optional) Create and activate a virtual environment:
 ```powershell
@@ -48,14 +71,14 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-## Step 3: Configuration
+## Step 4: Configuration
 Edit `db.py` and update the `DB_CONFIG` dictionary to match your local MySQL settings. Example:
 ```python
 # db.py (example snippet)
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "YOUR_PASSWORD",
+    "password": "YOUR_PASSWORD", # Update your password
     "database": "ComputingU",
     "port": 3306
 }
@@ -66,7 +89,7 @@ python test.py
 ```
 Output should confirm that passwords have been hashed/updated.
 
-## Step 4: Running the Application
+## Step 5: Running the Application
 Ensure MySQL is running, then start the Flask server:
 ```powershell
 python server.py
@@ -93,11 +116,10 @@ Default password for demo accounts after running `test.py`: `password123`
    - Role: Add/modify/query/delete student disciplinary records.
 
 ## Project Structure
-- `server.py` — Main Flask application entry point.  
-- `controller.py` — Request routing logic.  
-- `db.py` — Database connection configuration.  
-- `encryption.py` — AES encryption key management.  
-- `sql_method_*.py` — SQL queries separated by role context.  
-- `front/templates/` — HTML frontend templates.  
-- `app.log` — System log file (records logins, errors, modifications).  
+- `server.py` — Main Flask application entry point.
+- `db.py` — Database connection configuration.
+- `encryption.py` — AES encryption key management.
+- `sql_method_*.py` — SQL queries separated by role context.
+- `front/templates/` — HTML frontend templates.
+- `app.log` — System log file (records logins, errors, modifications).
 - `config.ini` — Configuration file storing AES encryption key.

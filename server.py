@@ -3,7 +3,6 @@ import logging
 import re
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
-from controller import *
 from sql_method_student_guardian import *
 from sql_method_ARO_DRO import *
 from flask_jwt_extended import (
